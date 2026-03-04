@@ -1,425 +1,2274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monterey Bay Internet Hub • Book Today</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
-        body { font-family: 'Inter', system_ui, sans-serif; }
-        .logo-font { font-family: 'Space Grotesk', sans-serif; }
-        .provider-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .provider-card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); }
-        .tab-active { border-bottom: 3px solid #0ea5e9; color: #0ea5e9; font-weight: 600; }
-        .outage-bar { height: 8px; background: linear-gradient(90deg, #22c55e, #eab308, #ef4444); border-radius: 9999px; }
-        .calendar-day { cursor: pointer; transition: all 0.2s; }
-        .calendar-day:hover { background-color: #f0f9ff; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monterey County Internet Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ╔══════════════════════════════════════════════════════════╗
+   ║  DESIGN TOKENS                                           ║
+   ╚══════════════════════════════════════════════════════════╝ */
+:root {
+  --ink:   #090c1e;
+  --paper: #f8f4ed;
+  --cream: #f0ead9;
+  --mid:   #5a6a82;
+  --bdr:   rgba(10,28,60,.12);
+
+  /* ISP brand colours — used in HTML and CSS */
+  --att:   #00a8e0;  --att-d:  #005f8e;
+  --xfin:  #d4007a;  --xfin-d: #8a0050;
+  --tmob:  #e4002b;  --tmob-d: #950020;
+  --verz:  #cd040b;  --verz-d: #850208;
+  --fron:  #ff6b00;  --fron-d: #b84d00;
+  --star:  #7c3aed;  --star-d: #4c1d95;
+  --cru:   #059669;  --cru-d:  #065f46;
+  --raz:   #0891b2;  --raz-d:  #0e5f80;
+  --hnet:  #d97706;  --hnet-d: #92400e;
+  --via:   #0f766e;  --via-d:  #134e4a;
+  --opt:   #0ea5e9;  --opt-d:  #075985;
+  --eth:   #16a34a;  --eth-d:  #14532d;
+
+  /* dashboard dark layer */
+  --dbg: #06101c;  --dp: #0b1929;  --db: rgba(0,180,216,.14);
+  --dk: rgba(255,255,255,.42);
+
+  /* accent spectrum for painting */
+  --lemon:   #ffd166;
+  --coral:   #ff6b6b;
+  --sage:    #06d6a0;
+  --lav:     #b5a0ff;
+  --blush:   #ff9eb5;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { font-family:'DM Sans',sans-serif; background:var(--paper); color:var(--ink); overflow-x:hidden; }
+
+/* ── PAINTERLY SECTION WRAPPER ──────────────────────────── */
+.paint { position:relative; isolation:isolate; }
+.paint .bgart {
+  position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+  /* height inherited from parent — no explicit height needed */
+}
+.paint > *:not(.bgart) { position:relative; z-index:1; }
+
+/* ── HEADER ─────────────────────────────────────────────── */
+header {
+  position:sticky; top:0; z-index:400;
+  background:rgba(6,8,22,.93);
+  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.hdr { max-width:1320px; margin:0 auto; padding:13px 26px; display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.logo { font-family:'Syne',sans-serif; font-size:1.22rem; font-weight:800; letter-spacing:-.3px; display:flex; align-items:center; gap:2px; }
+.logo .lm { color:var(--lemon); }
+.logo .li { color:var(--att); }
+.logo .lg { color:var(--lav); }
+#stBadge {
+  display:inline-flex; align-items:center; gap:6px; font-size:.68rem; font-weight:600;
+  padding:4px 11px; border-radius:20px; margin-left:10px;
+  border:1px solid rgba(74,222,128,.3); background:rgba(74,222,128,.08); color:#4ade80;
+  transition:all .4s;
+}
+#stBadge.warn { border-color:rgba(255,209,102,.35); background:rgba(255,209,102,.08); color:var(--lemon); }
+#stBadge.err  { border-color:rgba(255,107,107,.35); background:rgba(255,107,107,.08); color:var(--coral); }
+.stDot { width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
+nav { display:flex; gap:3px; flex-wrap:wrap; }
+nav a { color:rgba(255,255,255,.6); text-decoration:none; font-size:.78rem; font-weight:500; padding:6px 13px; border-radius:20px; transition:.2s; }
+nav a:hover { background:rgba(255,255,255,.1); color:#fff; }
+@media(max-width:640px){ nav { display:none; } }
+
+/* ── HERO ───────────────────────────────────────────────── */
+.hero {
+  min-height:90vh; background:var(--ink);
+  display:flex; align-items:center; justify-content:center;
+  text-align:center; padding:80px 26px;
+  position:relative; overflow:hidden;
+}
+/* Animated ISP-branded paint blobs */
+.blob { position:absolute; border-radius:50%; filter:blur(72px); mix-blend-mode:screen; animation:bloat 18s ease-in-out infinite alternate; }
+.b1{ width:58vw; height:58vw; background:rgba(0,168,224,.32);  top:-22%; left:-14%; animation-duration:17s; }
+.b2{ width:48vw; height:48vw; background:rgba(212,0,122,.26);  top:5%;  right:-8%; animation-duration:13s; animation-delay:-5s; }
+.b3{ width:42vw; height:42vw; background:rgba(124,58,237,.24); bottom:-14%; left:18%; animation-duration:21s; animation-delay:-9s; }
+.b4{ width:32vw; height:32vw; background:rgba(255,107,0,.22);  bottom:6%; right:14%; animation-duration:15s; animation-delay:-3s; }
+.b5{ width:28vw; height:28vw; background:rgba(6,214,160,.20);  top:40%; left:40%; animation-duration:23s; animation-delay:-12s; }
+.b6{ width:22vw; height:22vw; background:rgba(255,209,102,.18);top:10%; left:54%; animation-duration:11s; animation-delay:-6s; }
+.b7{ width:20vw; height:20vw; background:rgba(181,160,255,.22);top:58%; left:6%;  animation-duration:16s; animation-delay:-4s; }
+.b8{ width:26vw; height:26vw; background:rgba(229,0,43,.16);   top:44%; right:-4%;animation-duration:19s; animation-delay:-8s; }
+.b9{ width:16vw; height:16vw; background:rgba(5,150,105,.18);  top:20%; left:28%; animation-duration:14s; animation-delay:-7s; }
+@keyframes bloat {
+  0%  { transform:translate(0,0)    scale(1); }
+  33% { transform:translate(3%,5%)  scale(1.07); }
+  67% { transform:translate(-2%,2%) scale(.95); }
+  100%{ transform:translate(1%,-4%) scale(1.03); }
+}
+/* film grain */
+.hero::after {
+  content:''; position:absolute; inset:0; z-index:1; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
+  background-size:180px; opacity:.7;
+}
+.hero-inner { position:relative; z-index:2; max-width:760px; }
+.eyebrow {
+  display:inline-flex; align-items:center; gap:8px; margin-bottom:24px;
+  font-size:.7rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase;
+  color:var(--lemon); border:1px solid rgba(255,209,102,.28);
+  background:rgba(255,209,102,.07); padding:6px 16px; border-radius:20px;
+}
+.hero h1 {
+  font-family:'Syne',sans-serif; font-size:clamp(2.5rem,5.5vw,3.9rem);
+  font-weight:800; line-height:1.07; color:#fff; letter-spacing:-.5px; margin-bottom:18px;
+}
+.hero h1 .ht { color:var(--att); }
+.hero h1 .hg { color:var(--lemon); }
+.hero-sub { font-size:1.04rem; color:rgba(255,255,255,.7); max-width:520px; margin:0 auto 32px; line-height:1.68; }
+.chips { display:flex; flex-wrap:wrap; gap:9px; justify-content:center; }
+.chip {
+  font-size:.74rem; font-weight:700; padding:6px 15px; border-radius:20px;
+  border:1px solid; letter-spacing:.2px; cursor:default;
+}
+.chip-att  { color:var(--att);  border-color:rgba(0,168,224,.45);  background:rgba(0,168,224,.1);  }
+.chip-xfin { color:var(--xfin); border-color:rgba(212,0,122,.45);  background:rgba(212,0,122,.1); }
+.chip-tmob { color:#ff4d6d;     border-color:rgba(228,0,43,.45);   background:rgba(228,0,43,.1);  }
+.chip-star { color:#a78bfa;     border-color:rgba(124,58,237,.45); background:rgba(124,58,237,.1);}
+.chip-fron { color:var(--fron); border-color:rgba(255,107,0,.45);  background:rgba(255,107,0,.1); }
+.chip-gold { color:var(--lemon);border-color:rgba(255,209,102,.45);background:rgba(255,209,102,.1);}
+
+/* ── SHARED LIGHT SECTIONS ──────────────────────────────── */
+.sec-lt  { padding:72px 26px; background:var(--paper); }
+.sec-cr  { padding:72px 26px; background:var(--cream); }
+.sec-wh  { padding:72px 26px; background:#fff; }
+.wrap    { max-width:1320px; margin:0 auto; }
+.kicker  { font-family:'Syne',sans-serif; font-size:.67rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--att); margin-bottom:8px; }
+.sec-h   { font-family:'Syne',sans-serif; font-size:clamp(1.55rem,3vw,2.2rem); font-weight:800; color:var(--ink); line-height:1.15; margin-bottom:8px; }
+.sec-sub { color:var(--mid); font-size:.93rem; margin-bottom:40px; max-width:560px; line-height:1.65; }
+
+/* ── CITY TABS ──────────────────────────────────────────── */
+.ctabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:32px; }
+.ctab  { padding:9px 22px; border-radius:8px; border:2px solid var(--bdr); background:#fff; cursor:pointer; font-weight:600; font-size:.85rem; color:var(--mid); transition:.2s; font-family:'DM Sans',sans-serif; }
+.ctab.on,.ctab:hover { background:var(--ink); border-color:var(--ink); color:#fff; }
+.cpanel { display:none; } .cpanel.on { display:block; }
+.pgrid  { display:grid; grid-template-columns:repeat(auto-fill,minmax(278px,1fr)); gap:16px; }
+
+/* ── PROVIDER CARDS ─────────────────────────────────────── */
+/* --brand must be set inline per card */
+.pcard {
+  background:#fff; border-radius:14px; overflow:hidden;
+  border:1px solid var(--bdr); transition:transform .2s,box-shadow .2s;
+}
+.pcard:hover { transform:translateY(-3px); box-shadow:0 14px 36px rgba(10,28,60,.13); }
+/* Coloured header block */
+.pcard-head {
+  padding:13px 18px 11px;
+  background:color-mix(in srgb, var(--brand,#0a2540) 14%, #fff);
+  border-bottom:3px solid var(--brand,#0a2540);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.pcard-name { font-family:'Syne',sans-serif; font-weight:800; font-size:.95rem; color:var(--brand,#0a2540); }
+.pbadge {
+  font-size:.62rem; font-weight:700; padding:3px 9px; border-radius:10px;
+  text-transform:uppercase; letter-spacing:.5px;
+  background:var(--brand,#0a2540); color:#fff;
+}
+.pcard-body { padding:14px 18px; }
+.srow  { display:flex; gap:16px; margin-bottom:12px; }
+.sstat label { display:block; font-size:.62rem; color:var(--mid); font-weight:600; text-transform:uppercase; letter-spacing:.8px; margin-bottom:2px; }
+.sstat span  { font-family:'Syne',sans-serif; font-weight:800; font-size:1.05rem; color:var(--brand,var(--ink)); }
+.prow  { display:flex; align-items:baseline; gap:5px; padding-top:10px; border-top:1px solid rgba(10,28,60,.07); }
+.pfrom { font-size:.67rem; color:var(--mid); }
+.pval  { font-family:'Syne',sans-serif; font-weight:800; font-size:1.38rem; color:var(--brand,var(--ink)); }
+.pmo   { font-size:.73rem; color:var(--mid); }
+.cbar  { margin-top:9px; height:5px; background:rgba(10,28,60,.08); border-radius:3px; overflow:hidden; }
+.cfill { height:100%; border-radius:3px; background:var(--brand,var(--att)); opacity:.75; }
+.clbl  { font-size:.62rem; color:var(--mid); margin-top:4px; display:block; }
+.dsrc  { font-size:.72rem; color:var(--mid); margin-top:18px; padding:10px 14px; background:rgba(0,180,216,.06); border-radius:8px; border-left:3px solid var(--att); }
+
+/* ── DARK OUTAGE SECTION ────────────────────────────────── */
+#outages { background:var(--dbg); position:relative; overflow:hidden; }
+
+/* ISP-coloured paint splotches behind the dashboard */
+.obg {
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 55% 40% at  8% 15%, rgba(0,168,224,.11)  0%, transparent 60%),
+    radial-gradient(ellipse 45% 50% at 92% 10%, rgba(212,0,122,.09)   0%, transparent 55%),
+    radial-gradient(ellipse 50% 45% at 50% 80%, rgba(124,58,237,.09)  0%, transparent 60%),
+    radial-gradient(ellipse 40% 35% at 85% 65%, rgba(255,107,0,.08)   0%, transparent 55%),
+    radial-gradient(ellipse 45% 40% at 18% 75%, rgba(5,150,105,.07)   0%, transparent 55%),
+    radial-gradient(ellipse 35% 30% at 65% 30%, rgba(255,209,102,.07) 0%, transparent 50%),
+    radial-gradient(ellipse 30% 35% at 30% 45%, rgba(229,0,43,.07)    0%, transparent 55%);
+}
+.odash { position:relative; z-index:1; }
+
+.dtopbar {
+  background:rgba(10,22,42,.94); border-bottom:1px solid var(--db);
+  padding:18px 30px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+}
+.dtitle  { font-family:'Syne',sans-serif; font-size:1.08rem; font-weight:800; color:#fff; }
+.dtitle span { color:var(--att); }
+.dsub    { font-size:.68rem; color:rgba(255,255,255,.38); margin-top:3px; }
+.dbadge  { font-family:'DM Mono',monospace; font-size:.7rem; color:rgba(255,255,255,.42); background:rgba(0,180,216,.08); border:1px solid var(--db); padding:5px 13px; border-radius:20px; }
+.ldot    { display:inline-flex; align-items:center; gap:6px; font-size:.67rem; color:#4ade80; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+.ldot::before { content:''; width:7px; height:7px; border-radius:50%; background:#4ade80; animation:blink 1.8s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+.din   { max-width:1320px; margin:0 auto; padding:30px 30px 40px; }
+
+.snote {
+  background:rgba(0,180,216,.07); border:1px solid rgba(0,180,216,.18);
+  border-radius:10px; padding:12px 17px; font-size:.74rem; color:rgba(255,255,255,.38);
+  line-height:1.65; margin-bottom:26px;
+}
+.snote a { color:var(--att); text-decoration:none; }
+.snote a:hover { text-decoration:underline; }
+.snote strong { color:rgba(0,180,216,.9); }
+
+/* stat cards */
+.dstats { display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:11px; margin-bottom:30px; }
+.dstat  { background:var(--dp); border:1px solid var(--db); border-radius:12px; padding:15px 16px; position:relative; overflow:hidden; }
+.dstat::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--da,var(--att)); }
+.dstat .dl { font-size:.65rem; color:rgba(255,255,255,.38); text-transform:uppercase; letter-spacing:.8px; font-weight:500; margin-bottom:6px; }
+.dstat .dv { font-family:'Syne',sans-serif; font-size:1.65rem; font-weight:800; color:#fff; line-height:1; }
+.dstat .dv span { font-size:.8rem; font-weight:400; color:rgba(255,255,255,.38); }
+.dstat .dn { font-size:.66rem; color:rgba(255,255,255,.38); margin-top:3px; }
+.dn.ok { color:#4ade80; } .dn.hi { color:var(--coral); }
+
+/* dark section headings */
+.dk-k { font-family:'Syne',sans-serif; font-size:.65rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--att); margin-bottom:5px; }
+.dk-h { font-family:'Syne',sans-serif; font-size:1.18rem; font-weight:800; color:#fff; margin-bottom:17px; }
+
+/* legend */
+.dleg  { display:flex; flex-wrap:wrap; gap:13px; margin-bottom:12px; }
+.dleg-i{ display:flex; align-items:center; gap:6px; font-size:.71rem; color:rgba(255,255,255,.48); }
+.dleg-d{ width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
+/* chart layout */
+.cg21  { display:grid; grid-template-columns:2fr 1fr; gap:17px; margin-bottom:17px; }
+.cg11  { display:grid; grid-template-columns:1fr 1fr; gap:17px; margin-bottom:30px; }
+@media(max-width:900px){ .cg21,.cg11 { grid-template-columns:1fr; } }
+.dpanel { background:var(--dp); border:1px solid var(--db); border-radius:12px; padding:19px 21px; }
+.dpanel .pt { font-family:'Syne',sans-serif; font-weight:700; font-size:.87rem; color:#fff; margin-bottom:2px; }
+.dpanel .ps { font-size:.67rem; color:rgba(255,255,255,.35); margin-bottom:12px; }
+
+/* uptime cards */
+.ugrid  { display:grid; grid-template-columns:repeat(auto-fill,minmax(318px,1fr)); gap:13px; margin-bottom:30px; }
+.ucard  { background:var(--dp); border:1px solid var(--db); border-radius:12px; overflow:hidden; }
+.uhead  { padding:12px 15px; border-bottom:1px solid var(--db); display:flex; align-items:center; justify-content:space-between; border-left:4px solid var(--brand,var(--att)); }
+.uname  { font-family:'Syne',sans-serif; font-weight:700; font-size:.87rem; color:#fff; display:flex; align-items:center; gap:7px; }
+.udot   { width:8px; height:8px; border-radius:50%; background:var(--brand,var(--att)); flex-shrink:0; }
+.upct   { font-family:'DM Mono',monospace; font-size:.83rem; padding:3px 9px; border-radius:5px; }
+.upct.ex{ background:rgba(74,222,128,.14);  color:#4ade80; }
+.upct.gd{ background:rgba(255,209,102,.14); color:var(--lemon); }
+.upct.po{ background:rgba(255,107,107,.14); color:var(--coral); }
+.ubody  { padding:11px 15px; }
+.ucrow  { display:flex; align-items:center; padding:5px 0; border-bottom:1px solid rgba(255,255,255,.04); }
+.ucrow:last-child { border-bottom:none; }
+.ucn    { font-size:.77rem; color:rgba(255,255,255,.42); width:76px; flex-shrink:0; }
+.ucbar  { flex:1; height:4px; background:rgba(255,255,255,.06); border-radius:2px; margin:0 11px; overflow:hidden; }
+.ucfill { height:100%; border-radius:2px; background:var(--brand,var(--att)); }
+.ucv    { font-family:'DM Mono',monospace; font-size:.7rem; width:48px; text-align:right; color:var(--brand,#fff); }
+.ufoot  { padding:8px 15px; border-top:1px solid var(--db); font-size:.63rem; color:rgba(255,255,255,.24); line-height:1.5; display:flex; justify-content:space-between; gap:8px; }
+.ufoot .ui { color:var(--coral); font-family:'DM Mono',monospace; white-space:nowrap; }
+
+/* city gauges */
+.gauges { display:grid; grid-template-columns:repeat(5,1fr); gap:11px; margin-bottom:30px; }
+@media(max-width:900px){ .gauges { grid-template-columns:repeat(3,1fr); } }
+@media(max-width:560px){ .gauges { grid-template-columns:1fr 1fr; } }
+.gcrd   { background:var(--dp); border:1px solid var(--db); border-radius:12px; padding:15px 13px; text-align:center; }
+.gname  { font-family:'Syne',sans-serif; font-weight:700; font-size:.82rem; color:#fff; margin-bottom:9px; }
+.gwrap  { width:72px; height:72px; position:relative; margin:0 auto 9px; }
+.gwrap canvas { width:72px!important; height:72px!important; }
+.glbl   { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:'Syne',sans-serif; font-weight:800; font-size:.68rem; color:#fff; text-align:center; line-height:1.2; }
+.grows  { display:flex; flex-direction:column; gap:3px; }
+.grow   { display:flex; justify-content:space-between; font-size:.65rem; }
+.gk     { color:rgba(255,255,255,.38); }
+.gv     { font-family:'DM Mono',monospace; color:rgba(255,255,255,.72); }
+.gv.rd  { color:var(--coral); }
+
+/* incidents */
+.inclist { display:flex; flex-direction:column; gap:10px; margin-bottom:30px; }
+.incrow  {
+  background:var(--dp); border:1px solid var(--db); border-radius:10px;
+  padding:13px 17px; display:grid; grid-template-columns:96px 1fr auto; gap:13px; align-items:start; transition:.2s;
+}
+.incrow:hover { border-color:rgba(0,180,216,.28); }
+@media(max-width:640px){ .incrow { grid-template-columns:1fr; } }
+.idate { font-family:'DM Mono',monospace; font-size:.67rem; color:var(--att); padding-top:2px; }
+.ititle{ font-family:'Syne',sans-serif; font-weight:700; font-size:.85rem; color:#fff; margin-bottom:4px; }
+.idesc { font-size:.76rem; color:rgba(255,255,255,.42); line-height:1.55; }
+.itags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.itag  { font-size:.59rem; font-weight:700; padding:2px 7px; border-radius:8px; text-transform:uppercase; letter-spacing:.4px; }
+.it-c  { background:rgba(0,180,216,.14);  color:var(--att); }
+.it-p  { background:rgba(255,255,255,.07);color:rgba(255,255,255,.5); }
+.it-ca { background:rgba(255,209,102,.1); color:var(--lemon); }
+.isev  { text-align:right; flex-shrink:0; }
+.sev   { font-size:.59rem; font-weight:700; padding:3px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:.4px; }
+.sev.ma{ background:rgba(255,107,107,.16); color:var(--coral); }
+.sev.mo{ background:rgba(167,139,250,.16); color:var(--lav); }
+.sev.mi{ background:rgba(255,209,102,.16); color:var(--lemon); }
+.idur  { font-size:.65rem; color:rgba(255,255,255,.32); margin-top:4px; font-family:'DM Mono',monospace; }
+
+/* community / status grid */
+.cgrid  { display:grid; grid-template-columns:1fr 1fr; gap:17px; margin-bottom:30px; }
+@media(max-width:760px){ .cgrid { grid-template-columns:1fr; } }
+.cpnl   { background:var(--dp); border:1px solid var(--db); border-radius:12px; padding:19px 21px; }
+.cpnl h3{ font-family:'Syne',sans-serif; font-weight:700; font-size:.88rem; color:#fff; margin-bottom:13px; }
+.slink  { display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); border-radius:8px; padding:9px 13px; text-decoration:none; transition:.2s; margin-bottom:8px; }
+.slink:hover { background:rgba(0,180,216,.15); }
+.sln    { font-weight:600; color:#fff; font-size:.82rem; display:flex; align-items:center; gap:8px; }
+.slsdot { width:7px; height:7px; border-radius:50%; background:#4ade80; animation:blink 2s infinite; flex-shrink:0; }
+.sla    { font-size:.69rem; color:var(--att); font-weight:500; }
+.repbtn { display:inline-flex; align-items:center; gap:7px; background:var(--coral); color:#fff; font-weight:600; font-size:.79rem; padding:8px 14px; border-radius:8px; border:none; cursor:pointer; margin-top:10px; font-family:'DM Sans',sans-serif; transition:.2s; }
+.repbtn:hover { background:#ff4d4d; }
+.repform { display:none; margin-top:10px; background:rgba(255,255,255,.05); padding:13px; border-radius:9px; border:1px solid rgba(255,255,255,.08); }
+.repform.open { display:block; }
+.repform label { font-size:.69rem; color:rgba(255,255,255,.48); display:block; margin-bottom:3px; font-weight:500; }
+.repform select,.repform textarea { width:100%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:7px; color:#fff; padding:8px 11px; font-size:.8rem; margin-bottom:8px; font-family:'DM Sans',sans-serif; }
+.repform select option { background:#0b1929; color:#fff; }
+.repsub { background:var(--att); color:#fff; font-weight:600; font-size:.8rem; padding:8px 16px; border:none; border-radius:7px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+.replist { margin-top:12px; display:flex; flex-direction:column; gap:7px; max-height:195px; overflow-y:auto; }
+.repitem { background:rgba(255,255,255,.05); border-radius:7px; padding:8px 12px; font-size:.76rem; color:rgba(255,255,255,.78); border-left:3px solid var(--coral); }
+.repitem strong { color:var(--coral); }
+.rtime   { font-size:.63rem; color:rgba(255,255,255,.28); margin-top:2px; display:block; }
+.dfoot   { background:rgba(8,18,34,.95); border-top:1px solid var(--db); padding:14px 30px; font-size:.67rem; color:rgba(255,255,255,.32); line-height:1.7; }
+.dfoot a { color:var(--att); text-decoration:none; }
+
+/* ── BOOKING ────────────────────────────────────────────── */
+.bwrap { display:grid; grid-template-columns:1fr 1fr; gap:38px; align-items:start; }
+@media(max-width:768px){ .bwrap { grid-template-columns:1fr; } }
+.calcrd { background:#fff; border-radius:14px; padding:21px; border:1px solid var(--bdr); }
+.calhdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:17px; }
+.calnav { background:none; border:1px solid var(--bdr); border-radius:6px; padding:6px 13px; cursor:pointer; font-size:1rem; color:var(--ink); transition:.2s; }
+.calnav:hover { background:rgba(0,180,216,.08); }
+.callbl { font-family:'Syne',sans-serif; font-weight:800; font-size:.95rem; color:var(--ink); }
+.calgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center; }
+.cdow  { font-size:.62rem; font-weight:700; color:var(--mid); text-transform:uppercase; letter-spacing:.6px; padding-bottom:6px; }
+.cday  { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:7px; font-size:.79rem; font-weight:500; cursor:pointer; color:var(--ink); transition:.15s; position:relative; }
+.cday:hover:not(.emp):not(.pst) { background:var(--att); color:#fff; }
+.cday.sel  { background:var(--ink)!important; color:#fff!important; font-weight:700; }
+.cday.tod  { font-weight:700; color:var(--att); }
+.cday.tod::after { content:''; position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--att); }
+.cday.pst  { color:#c8d3de; cursor:default; }
+.cday.apt  { background:rgba(255,107,107,.09); }
+.cday.apt::before { content:'·'; position:absolute; top:1px; right:4px; font-size:1rem; color:var(--coral); line-height:1; }
+.bklist { margin-top:12px; padding-top:12px; border-top:1px solid rgba(10,28,60,.07); max-height:140px; overflow-y:auto; }
+.bklist h4 { font-size:.7rem; color:var(--mid); font-weight:700; text-transform:uppercase; letter-spacing:.7px; margin-bottom:8px; }
+.bkitem { font-size:.77rem; color:var(--ink); padding:6px 9px; background:var(--cream); border-radius:6px; margin-bottom:4px; border-left:3px solid var(--att); }
+.bkitem span { color:var(--mid); font-size:.67rem; display:block; }
+.fmcrd  { background:#fff; border-radius:14px; padding:27px; border:1px solid var(--bdr); }
+.fmcrd h3 { font-family:'Syne',sans-serif; font-weight:800; font-size:1.02rem; color:var(--ink); margin-bottom:16px; }
+.fg     { margin-bottom:13px; }
+.fg label { display:block; font-size:.7rem; font-weight:700; color:var(--mid); text-transform:uppercase; letter-spacing:.7px; margin-bottom:5px; }
+.fg input,.fg select { width:100%; padding:10px 12px; border:1.5px solid rgba(10,28,60,.15); border-radius:8px; font-size:.89rem; font-family:'DM Sans',sans-serif; color:var(--ink); transition:.2s; background:#fafcfe; }
+.fg input:focus,.fg select:focus { outline:none; border-color:var(--att); background:#fff; }
+.frow   { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media(max-width:480px){ .frow { grid-template-columns:1fr; } }
+.seldisp{ padding:10px 12px; background:rgba(0,180,216,.07); border-radius:8px; font-size:.85rem; font-weight:600; color:var(--ink); margin-bottom:13px; border:1px solid rgba(0,180,216,.22); }
+.subbtn { width:100%; padding:13px; background:linear-gradient(135deg,var(--ink),#1a535c); color:#fff; font-weight:800; font-size:.9rem; border:none; border-radius:10px; cursor:pointer; font-family:'Syne',sans-serif; transition:.2s; margin-top:4px; }
+.subbtn:hover { opacity:.9; } .subbtn:disabled { opacity:.45; cursor:not-allowed; }
+.fmsg   { padding:10px 12px; border-radius:8px; font-size:.81rem; font-weight:500; margin-top:10px; display:none; }
+.fmsg.ok{ background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; display:block; }
+.fmsg.er{ background:#fef2f2; color:#991b1b; border:1px solid #fecaca; display:block; }
+
+/* ── FIBER NEWS ─────────────────────────────────────────── */
+.ngrid  { display:grid; grid-template-columns:repeat(auto-fill,minmax(316px,1fr)); gap:19px; }
+.ncrd   { background:var(--cream); border-radius:12px; border:1px solid var(--bdr); overflow:hidden; transition:.2s; display:flex; flex-direction:column; }
+.ncrd:hover { box-shadow:0 8px 24px rgba(10,28,60,.1); }
+.ntop   { padding:17px 19px 0; }
+.ndate  { font-size:.65rem; font-weight:700; color:var(--att); letter-spacing:1px; text-transform:uppercase; margin-bottom:5px; }
+.nsrc   { font-size:.64rem; color:var(--mid); font-weight:500; margin-bottom:7px; }
+.nhl    { font-family:'Syne',sans-serif; font-weight:800; font-size:.91rem; color:var(--ink); line-height:1.4; text-decoration:none; display:block; margin-bottom:8px; transition:.2s; }
+.nhl:hover { color:var(--att); }
+.nsum   { font-size:.8rem; color:var(--mid); line-height:1.6; padding:0 19px 16px; flex:1; }
+.nfoot  { padding:11px 19px; border-top:1px solid var(--bdr); display:flex; align-items:center; justify-content:space-between; }
+.nlink  { font-size:.73rem; font-weight:700; color:var(--att); text-decoration:none; }
+.nlink:hover { color:var(--ink); }
+
+/* ── CANCELLATION SECTION ───────────────────────────────── */
+#cancel { background:var(--ink); position:relative; overflow:hidden; }
+
+/* multi-colour ISP paint blobs behind the dark section */
+.cbg {
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 50% 35% at  5% 10%, rgba(0,168,224,.10)  0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 95% 15%, rgba(212,0,122,.09)   0%, transparent 55%),
+    radial-gradient(ellipse 45% 35% at 20% 85%, rgba(255,107,0,.08)   0%, transparent 55%),
+    radial-gradient(ellipse 35% 30% at 80% 80%, rgba(124,58,237,.09)  0%, transparent 55%),
+    radial-gradient(ellipse 40% 25% at 50% 50%, rgba(229,0,43,.06)    0%, transparent 55%),
+    radial-gradient(ellipse 30% 25% at 70% 35%, rgba(5,150,105,.07)   0%, transparent 50%);
+}
+.cdash { position:relative; z-index:1; max-width:1320px; margin:0 auto; padding:56px 30px 64px; }
+
+/* section intro */
+.cs-kicker { font-family:'Syne',sans-serif; font-size:.67rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--att); margin-bottom:7px; }
+.cs-h      { font-family:'Syne',sans-serif; font-size:clamp(1.6rem,3vw,2.3rem); font-weight:800; color:#fff; line-height:1.1; margin-bottom:10px; }
+.cs-sub    { font-size:.93rem; color:rgba(255,255,255,.5); max-width:640px; line-height:1.65; margin-bottom:44px; }
+
+/* provider selector tabs */
+.can-tabs  { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:32px; }
+.can-tab   {
+  display:flex; align-items:center; gap:8px;
+  padding:9px 18px; border-radius:8px; cursor:pointer; border:2px solid transparent;
+  font-weight:700; font-size:.8rem; font-family:'DM Sans',sans-serif;
+  background:rgba(255,255,255,.06); color:rgba(255,255,255,.55);
+  transition:.2s; position:relative;
+}
+.can-tab .ctdot { width:9px; height:9px; border-radius:50%; background:var(--brand,#aaa); flex-shrink:0; }
+.can-tab.on,
+.can-tab:hover {
+  background:rgba(255,255,255,.11);
+  border-color:var(--brand,rgba(255,255,255,.25));
+  color:#fff;
+}
+.can-tab.on { box-shadow:0 0 0 1px var(--brand,transparent) inset; }
+
+/* provider cancellation panels */
+.can-panel { display:none; }
+.can-panel.on { display:block; }
+
+/* provider cancel card */
+.canisp {
+  background:var(--dp); border:1px solid var(--db); border-radius:16px; overflow:hidden;
+}
+.canisp-head {
+  padding:20px 26px 18px;
+  border-bottom:3px solid var(--brand,var(--att));
+  background:color-mix(in srgb, var(--brand,#00a8e0) 8%, var(--dp));
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+}
+.canisp-name { font-family:'Syne',sans-serif; font-weight:800; font-size:1.1rem; color:#fff; display:flex; align-items:center; gap:10px; }
+.canisp-dot  { width:12px; height:12px; border-radius:50%; background:var(--brand,var(--att)); flex-shrink:0; }
+.canisp-meta { display:flex; gap:10px; flex-wrap:wrap; }
+.cmeta-badge {
+  font-size:.68rem; font-weight:700; padding:4px 11px; border-radius:20px; text-transform:uppercase; letter-spacing:.5px;
+}
+.cm-phone { background:rgba(0,180,216,.15); color:var(--att); border:1px solid rgba(0,180,216,.3); }
+.cm-online{ background:rgba(74,222,128,.13); color:#4ade80;   border:1px solid rgba(74,222,128,.28); }
+.cm-store { background:rgba(255,209,102,.13);color:var(--lemon);border:1px solid rgba(255,209,102,.28); }
+.cm-fee   { background:rgba(255,107,107,.13);color:var(--coral);border:1px solid rgba(255,107,107,.28); }
+.cm-nofee { background:rgba(74,222,128,.13); color:#4ade80;   border:1px solid rgba(74,222,128,.28); }
+
+.canisp-body { display:grid; grid-template-columns:1fr 340px; gap:0; }
+@media(max-width:900px){ .canisp-body { grid-template-columns:1fr; } }
+
+/* steps column */
+.can-steps { padding:24px 28px; }
+.can-steps h3 { font-family:'Syne',sans-serif; font-weight:800; font-size:.92rem; color:#fff; margin-bottom:18px; letter-spacing:.2px; }
+.step-list { display:flex; flex-direction:column; gap:0; }
+.step {
+  display:grid; grid-template-columns:36px 1fr; gap:0 14px; align-items:start;
+  padding-bottom:18px; position:relative;
+}
+.step:not(:last-child)::after {
+  content:''; position:absolute; left:17px; top:36px; bottom:0;
+  width:2px; background:linear-gradient(to bottom, var(--brand,var(--att)) 0%, rgba(255,255,255,.06) 100%);
+}
+.step-num {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:var(--brand,var(--att)); display:flex; align-items:center; justify-content:center;
+  font-family:'Syne',sans-serif; font-weight:800; font-size:.82rem; color:#fff; z-index:1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand,var(--att)) 25%, transparent);
+}
+.step-body { padding-top:6px; padding-bottom:2px; }
+.step-title { font-family:'Syne',sans-serif; font-weight:700; font-size:.84rem; color:#fff; margin-bottom:4px; }
+.step-desc  { font-size:.78rem; color:rgba(255,255,255,.52); line-height:1.6; }
+.step-desc a { color:var(--brand,var(--att)); text-decoration:none; font-weight:600; }
+.step-desc a:hover { text-decoration:underline; }
+.step-tip {
+  display:inline-flex; align-items:center; gap:6px; margin-top:7px;
+  font-size:.7rem; font-weight:600; color:var(--lemon);
+  background:rgba(255,209,102,.08); border:1px solid rgba(255,209,102,.2);
+  padding:4px 11px; border-radius:8px;
+}
+
+/* info sidebar */
+.can-info { border-left:1px solid var(--db); padding:24px 22px; display:flex; flex-direction:column; gap:14px; }
+@media(max-width:900px){ .can-info { border-left:none; border-top:1px solid var(--db); } }
+.can-box {
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+  border-radius:10px; padding:14px 16px;
+}
+.can-box h4 { font-family:'Syne',sans-serif; font-weight:700; font-size:.78rem; color:#fff; margin-bottom:10px; display:flex; align-items:center; gap:7px; }
+.can-box ul { list-style:none; display:flex; flex-direction:column; gap:7px; }
+.can-box ul li { font-size:.76rem; color:rgba(255,255,255,.52); line-height:1.55; display:flex; gap:8px; align-items:baseline; }
+.can-box ul li::before { content:'•'; color:var(--brand,var(--att)); font-size:.9rem; flex-shrink:0; }
+.can-box ul li strong { color:rgba(255,255,255,.82); }
+.can-box .warnrow { color:var(--coral)!important; }
+.can-box .warnrow::before { color:var(--coral)!important; content:'⚠'!important; }
+.can-box .okrow   { color:#4ade80!important; }
+.can-box .okrow::before { color:#4ade80!important; content:'✓'!important; }
+.can-link {
+  display:flex; align-items:center; justify-content:space-between;
+  text-decoration:none; background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.09); border-radius:8px;
+  padding:10px 13px; transition:.2s;
+}
+.can-link:hover { background:rgba(0,180,216,.16); border-color:rgba(0,180,216,.35); }
+.can-link-n { font-size:.8rem; font-weight:600; color:#fff; }
+.can-link-a { font-size:.7rem; color:var(--att); font-weight:600; }
+
+/* ── FOOTER / TOAST ─────────────────────────────────────── */
+footer { background:var(--ink); color:rgba(255,255,255,.52); text-align:center; padding:28px 24px; font-size:.77rem; line-height:1.65; }
+footer strong { color:rgba(255,255,255,.88); }
+.toast { position:fixed; bottom:21px; right:21px; background:#1a535c; color:#fff; padding:12px 19px; border-radius:10px; font-size:.84rem; font-weight:500; box-shadow:0 8px 28px rgba(0,0,0,.22); transform:translateY(80px); opacity:0; transition:.35s; z-index:9999; max-width:295px; pointer-events:none; }
+.toast.show { transform:translateY(0); opacity:1; }
+</style>
 </head>
-<body class="bg-zinc-950 text-zinc-200">
-    <!-- HEADER -->
-    <header class="bg-black border-b border-zinc-800 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-            <div class="flex items-center gap-x-3">
-                <div class="w-9 h-9 bg-sky-500 rounded-2xl flex items-center justify-center text-white font-bold text-2xl logo-font">MB</div>
-                <div>
-                    <span class="logo-font text-3xl font-semibold tracking-tighter">Monterey Bay</span>
-                    <span class="text-sky-400 text-xl font-medium">Internet</span>
+<body>
+
+<!-- ═══════ HEADER ═══════════════════════════════════════════ -->
+<header>
+  <div class="hdr">
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+      <div class="logo"><span class="lm">Monterey</span><span class="li">Internet</span><span class="lg">.guide</span></div>
+      <span id="stBadge"><span class="stDot"></span> Connecting…</span>
+    </div>
+    <nav>
+      <a href="#providers">Providers</a>
+      <a href="#outages">Outage Dashboard</a>
+      <a href="#booking">Book</a>
+      <a href="#news">Fiber News</a>
+      <a href="#cancel">How to Cancel</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ═══════ HERO ══════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="b1 blob"></div><div class="b2 blob"></div><div class="b3 blob"></div>
+  <div class="b4 blob"></div><div class="b5 blob"></div><div class="b6 blob"></div>
+  <div class="b7 blob"></div><div class="b8 blob"></div><div class="b9 blob"></div>
+  <div class="hero-inner">
+    <div class="eyebrow">📡 FCC Broadband · 5 Cities · Live Outage Dashboard</div>
+    <h1>Find the Best Internet<br>in <span class="ht">Monterey</span> <span class="hg">County</span></h1>
+    <p class="hero-sub">Compare every ISP, track real outages in real time, and book a free consultation — all in one place.</p>
+    <div class="chips">
+      <span class="chip chip-att">AT&amp;T Fiber</span>
+      <span class="chip chip-xfin">Xfinity</span>
+      <span class="chip chip-tmob">T-Mobile</span>
+      <span class="chip chip-star">Starlink</span>
+      <span class="chip chip-fron">Frontier</span>
+      <span class="chip chip-gold">📅 Free Consultation</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ PROVIDERS ═════════════════════════════════════════ -->
+<section id="providers" class="sec-lt paint">
+  <div class="bgart" id="bgProviders"></div>
+  <div class="wrap">
+    <div class="kicker">FCC Broadband Data Collection · Updated June 2025</div>
+    <h2 class="sec-h">Internet Providers by City</h2>
+    <p class="sec-sub">Speeds and coverage from FCC BDC (Nov 2025 release). Entry-level pricing — faster tiers available.</p>
+    <div class="ctabs">
+      <button class="ctab on"  onclick="showCity('monterey',this)">Monterey</button>
+      <button class="ctab"     onclick="showCity('salinas',this)">Salinas</button>
+      <button class="ctab"     onclick="showCity('capitola',this)">Capitola</button>
+      <button class="ctab"     onclick="showCity('carmel',this)">Carmel</button>
+      <button class="ctab"     onclick="showCity('gilroy',this)">Gilroy</button>
+    </div>
+    <div class="cpanel on" id="cp-monterey"></div>
+    <div class="cpanel"    id="cp-salinas"></div>
+    <div class="cpanel"    id="cp-capitola"></div>
+    <div class="cpanel"    id="cp-carmel"></div>
+    <div class="cpanel"    id="cp-gilroy"></div>
+  </div>
+</section>
+
+<!-- ═══════ OUTAGE DASHBOARD ══════════════════════════════════ -->
+<section id="outages">
+  <div class="obg"></div>
+  <div class="odash">
+    <div class="dtopbar">
+      <div>
+        <div class="dtitle">Monterey County <span>ISP Outage</span> Dashboard</div>
+        <div class="dsub">Monterey · Salinas · Capitola · Carmel · Gilroy</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="dbadge">Jan 1 → Mar 3, 2026 · 62 days</div>
+        <div class="ldot">Live Reports</div>
+      </div>
+    </div>
+    <div class="din">
+      <div class="snote">
+        <strong>📊 Sources:</strong>
+        <a href="https://istheservicedown.com/problems/comcast-xfinity/5391295-salinas-monterey-county-california-united-states" target="_blank">IsTheServiceDown Xfinity/Salinas</a> ·
+        <a href="https://istheservicedown.com/problems/att/5374361-monterey-monterey-county-california-united-states" target="_blank">IsTheServiceDown AT&T/Monterey</a> ·
+        <a href="https://isdown.app/status/att" target="_blank">IsDown.app AT&T</a> (143 incidents / 3 yrs, avg 4.0/mo) ·
+        <a href="https://geoblackout.com/us/report/internet/xfinity" target="_blank">GeoBlackout Xfinity</a> (56 reports Mar 3: 62% landline / 27% mobile) ·
+        <a href="https://www.montereycountynow.com" target="_blank">Monterey County Now</a>
+        — <strong>~durations estimated from report clustering.</strong>
+      </div>
+      <div class="dstats" id="dstats"></div>
+      <div class="dk-k">Outage Report Frequency</div>
+      <div class="dk-h">Community-Reported Incidents by Week &amp; Provider</div>
+      <div class="dleg" id="dleg"></div>
+      <div class="cg21">
+        <div class="dpanel"><div class="pt">Weekly Outage Volume — All Cities</div><div class="ps">Reports per week · IsTheServiceDown, IsDown.app, GeoBlackout</div><div style="height:258px;position:relative"><canvas id="ch_weekly"></canvas></div></div>
+        <div class="dpanel"><div class="pt">Incident Share by Provider</div><div class="ps">% of total events Jan 1 – Mar 3, 2026</div><div style="height:258px;position:relative"><canvas id="ch_pie"></canvas></div></div>
+      </div>
+      <div class="cg11">
+        <div class="dpanel"><div class="pt">Estimated Downtime Hours by Provider</div><div class="ps">Cumulative across all 5 cities</div><div style="height:215px;position:relative"><canvas id="ch_down"></canvas></div></div>
+        <div class="dpanel"><div class="pt">Report Volume by City</div><div class="ps">Total community reports Jan 1 – Mar 3, 2026</div><div style="height:215px;position:relative"><canvas id="ch_city"></canvas></div></div>
+      </div>
+      <div class="dk-k">Service Reliability</div>
+      <div class="dk-h">Uptime % by Provider &amp; City — Jan 1 to Mar 3, 2026</div>
+      <div class="ugrid" id="ugrid"></div>
+      <div class="dk-k">City-Level Reliability</div>
+      <div class="dk-h">Average Uptime Across All Providers</div>
+      <div class="gauges" id="gauges"></div>
+      <div class="dk-k">Documented Events</div>
+      <div class="dk-h">Known Outage Incidents — Jan 1 to Mar 3, 2026</div>
+      <div class="inclist" id="inclist"></div>
+      <div class="dk-k">Community Reports &amp; Official Status</div>
+      <div class="dk-h">Submit a Report · Live Status Pages</div>
+      <div class="cgrid">
+        <div class="cpnl">
+          <h3>⚡ Submit a Community Outage Report</h3>
+          <div style="height:165px;position:relative;margin-bottom:10px"><canvas id="ch_comm"></canvas></div>
+          <p style="font-size:.66rem;color:rgba(255,255,255,.28);line-height:1.5">Bars = your submitted reports · last 30 days</p>
+          <button class="repbtn" onclick="toggleRepForm()">⚡ Report an Outage</button>
+          <div class="repform" id="repForm">
+            <label>Provider</label>
+            <select id="rProv">
+              <option>AT&T</option><option>Xfinity</option><option>T-Mobile Home</option>
+              <option>Verizon</option><option>Frontier</option><option>Starlink</option>
+              <option>Razzolink</option><option>Cruzio</option><option>Other</option>
+            </select>
+            <label>City</label>
+            <select id="rCity"><option>Monterey</option><option>Salinas</option><option>Capitola</option><option>Carmel</option><option>Gilroy</option></select>
+            <label>Description (optional)</label>
+            <textarea id="rDesc" rows="2" placeholder="e.g. No internet since 2pm…"></textarea>
+            <button class="repsub" onclick="submitRep()">Submit Report</button>
+          </div>
+          <div class="replist" id="repList"><div style="color:rgba(255,255,255,.3);font-size:.75rem">Loading reports…</div></div>
+        </div>
+        <div class="cpnl">
+          <h3>🔗 Official Provider Status Pages</h3>
+          <a class="slink" href="https://www.att.com/outages/" target="_blank"><div class="sln"><div class="slsdot" style="background:var(--att)"></div>AT&amp;T Outage Center</div><span class="sla">Check →</span></a>
+          <a class="slink" href="https://www.xfinity.com/support/status" target="_blank"><div class="sln"><div class="slsdot" style="background:var(--xfin)"></div>Xfinity / Comcast Status</div><span class="sla">Check →</span></a>
+          <a class="slink" href="https://networkstatus.t-mobile.com/" target="_blank"><div class="sln"><div class="slsdot" style="background:var(--tmob)"></div>T-Mobile Network Status</div><span class="sla">Check →</span></a>
+          <a class="slink" href="https://www.verizon.com/support/outage-map/" target="_blank"><div class="sln"><div class="slsdot" style="background:var(--verz)"></div>Verizon Outage Map</div><span class="sla">Check →</span></a>
+          <a class="slink" href="https://frontier.com/local/outage" target="_blank"><div class="sln"><div class="slsdot" style="background:var(--fron)"></div>Frontier Outage Center</div><span class="sla">Check →</span></a>
+          <a class="slink" href="https://downdetector.com" target="_blank"><div class="sln"><div class="slsdot" style="background:var(--lemon)"></div>Downdetector — All Providers</div><span class="sla">Live →</span></a>
+          <a class="slink" href="https://istheservicedown.com" target="_blank"><div class="sln"><div class="slsdot" style="background:var(--star)"></div>IsTheServiceDown</div><span class="sla">Reports →</span></a>
+        </div>
+      </div>
+    </div><!-- /din -->
+    <div class="dfoot">
+      <strong>Sources:</strong>
+      <a href="https://istheservicedown.com" target="_blank">IsTheServiceDown</a> ·
+      <a href="https://isdown.app/status/att" target="_blank">IsDown.app</a> ·
+      <a href="https://geoblackout.com" target="_blank">GeoBlackout</a> ·
+      <a href="https://www.montereycountynow.com" target="_blank">Monterey County Now</a>
+      — ISPs do not publish per-city uptime APIs. Figures derived from incident durations &amp; report density. ~Estimated durations.
+    </div>
+  </div><!-- /odash -->
+</section>
+
+<!-- ═══════ BOOKING ═══════════════════════════════════════════ -->
+<section id="booking" class="sec-cr paint">
+  <div class="bgart" id="bgBooking"></div>
+  <div class="wrap">
+    <div class="kicker">Free Consultation</div>
+    <h2 class="sec-h">Book an Appointment</h2>
+    <p class="sec-sub">Pick a date, fill in your details — we'll connect you with the right ISP for your home or business.</p>
+    <div class="bwrap">
+      <div class="calcrd">
+        <div class="calhdr">
+          <button class="calnav" onclick="calMove(-1)">‹</button>
+          <span class="callbl" id="calLbl"></span>
+          <button class="calnav" onclick="calMove(1)">›</button>
+        </div>
+        <div class="calgrid" id="calGrid"></div>
+        <div class="bklist">
+          <h4>Appointments this month</h4>
+          <div id="bkItems"></div>
+        </div>
+      </div>
+      <div class="fmcrd">
+        <h3>📅 <span id="fmDateLbl">Select a date to book</span></h3>
+        <div class="seldisp" id="selDisp">No date selected — click a date on the calendar</div>
+        <div class="frow">
+          <div class="fg"><label>First Name *</label><input type="text" id="fFirst" placeholder="Jane"></div>
+          <div class="fg"><label>Last Name *</label><input type="text" id="fLast"  placeholder="Smith"></div>
+        </div>
+        <div class="fg"><label>Email *</label><input type="email" id="fEmail" placeholder="jane@example.com"></div>
+        <div class="fg"><label>Phone *</label><input type="tel"   id="fPhone" placeholder="(831) 555-0100"></div>
+        <div class="fg">
+          <label>City</label>
+          <select id="fCity">
+            <option value="">— Select city —</option>
+            <option>Monterey</option><option>Salinas</option><option>Capitola</option>
+            <option>Carmel</option><option>Gilroy</option><option>Other</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Preferred Time</label>
+          <select id="fTime">
+            <option>9:00 AM</option><option>10:00 AM</option><option>11:00 AM</option>
+            <option>12:00 PM</option><option>1:00 PM</option><option>2:00 PM</option>
+            <option>3:00 PM</option><option>4:00 PM</option>
+          </select>
+        </div>
+        <div class="fg"><label>Notes (optional)</label><input type="text" id="fNotes" placeholder="e.g. Looking to switch from Xfinity…"></div>
+        <button class="subbtn" id="subBtn" onclick="bookApt()">Book Appointment</button>
+        <div class="fmsg" id="fMsg"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ FIBER NEWS ════════════════════════════════════════ -->
+<section id="news" class="sec-wh paint">
+  <div class="bgart" id="bgNews"></div>
+  <div class="wrap">
+    <div class="kicker">January 2024 – March 2026</div>
+    <h2 class="sec-h">Fiber Optic News · Monterey County</h2>
+    <p class="sec-sub">Real coverage of fiber and broadband developments from local and regional sources.</p>
+    <div class="ngrid" id="ngrid"></div>
+  </div>
+</section>
+
+<!-- ═══════ HOW TO CANCEL ══════════════════════════════════════ -->
+<section id="cancel">
+  <div class="cbg"></div>
+  <div class="cdash">
+    <div class="cs-kicker">Step-by-Step Cancellation Guides · Updated March 2026</div>
+    <h2 class="cs-h">How to Cancel Your Internet Service</h2>
+    <p class="cs-sub">Every major provider makes cancellation intentionally tricky. These guides cut through the friction — with exact phone numbers, current fees, equipment deadlines, and insider tips for each ISP.</p>
+
+    <div class="can-tabs">
+      <button class="can-tab on"  style="--brand:#00a8e0" onclick="showCan('att',this)"><span class="ctdot"></span>AT&amp;T</button>
+      <button class="can-tab"     style="--brand:#d4007a" onclick="showCan('xfin',this)"><span class="ctdot"></span>Xfinity</button>
+      <button class="can-tab"     style="--brand:#e4002b" onclick="showCan('tmob',this)"><span class="ctdot"></span>T-Mobile</button>
+      <button class="can-tab"     style="--brand:#7c3aed" onclick="showCan('star',this)"><span class="ctdot"></span>Starlink</button>
+      <button class="can-tab"     style="--brand:#ff6b00" onclick="showCan('fron',this)"><span class="ctdot"></span>Frontier</button>
+      <button class="can-tab"     style="--brand:#cd040b" onclick="showCan('verz',this)"><span class="ctdot"></span>Verizon</button>
+      <button class="can-tab"     style="--brand:#059669" onclick="showCan('cru',this)"><span class="ctdot"></span>Cruzio</button>
+      <button class="can-tab"     style="--brand:#d97706" onclick="showCan('hnet',this)"><span class="ctdot"></span>HughesNet</button>
+      <button class="can-tab"     style="--brand:#0f766e" onclick="showCan('via',this)"><span class="ctdot"></span>Viasat</button>
+    </div>
+
+    <!-- ── AT&T ── -->
+    <div class="can-panel on" id="can-att">
+      <div class="canisp" style="--brand:#00a8e0">
+        <div class="canisp-head">
+          <div class="canisp-name"><span class="canisp-dot"></span>AT&amp;T Fiber / Internet</div>
+          <div class="canisp-meta">
+            <span class="cmeta-badge cm-phone">Phone Only</span>
+            <span class="cmeta-badge cm-store">In-Store OK</span>
+            <span class="cmeta-badge cm-nofee">No ETF (Internet-only)</span>
+          </div>
+        </div>
+        <div class="canisp-body">
+          <div class="can-steps">
+            <h3>Step-by-Step: How to Cancel AT&amp;T Internet</h3>
+            <div class="step-list">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">Check your contract &amp; balance</div>
+                  <div class="step-desc">Log in at <a href="https://www.att.com/my/#/" target="_blank">att.com/my</a> and review your plan. Internet-only plans have no Early Termination Fee. Bundles with TV or phone may carry an ETF of <strong>$15/month remaining</strong> (up to $180 for 1-year, $360 for 2-year contracts). Clear any outstanding balance on all AT&amp;T products before calling.<span class="step-tip">💡 Final bills are not prorated — you pay the full last month regardless of when you cancel.</span></div>
                 </div>
-            </div>
-            <nav class="flex gap-x-8 text-sm font-medium">
-                <a href="#providers" class="hover:text-sky-400 transition-colors">Providers</a>
-                <a href="#book" class="hover:text-sky-400 transition-colors">Book Appointment</a>
-                <a href="#outages" class="hover:text-sky-400 transition-colors">Live Outages</a>
-                <a href="#news" class="hover:text-sky-400 transition-colors">Fiber News</a>
-            </nav>
-            <div class="flex items-center gap-x-2 text-xs bg-zinc-900 px-4 py-2 rounded-3xl border border-zinc-700">
-                <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                <span class="text-emerald-400 font-medium">LIVE DATA</span>
-            </div>
-        </div>
-    </header>
-
-    <!-- HERO -->
-    <section class="bg-gradient-to-br from-zinc-900 to-black py-20">
-        <div class="max-w-7xl mx-auto px-6 text-center">
-            <h1 class="text-6xl font-semibold tracking-tighter logo-font mb-4">Internet Providers in<br>Monterey • Salinas • Capitola • Carmel • Gilroy</h1>
-            <p class="text-xl text-zinc-400 max-w-2xl mx-auto mb-10">Real-time speeds &amp; pricing from FCC Broadband Map + provider sites • Book your install in 60 seconds</p>
-            
-            <div class="inline-flex bg-zinc-900 rounded-3xl p-1 border border-zinc-700">
-                <select id="city-select" onchange="switchCity()" 
-                        class="bg-transparent px-8 py-4 text-lg font-medium focus:outline-none rounded-3xl">
-                    <option value="Monterey">Monterey, CA</option>
-                    <option value="Salinas">Salinas, CA</option>
-                    <option value="Capitola">Capitola, CA</option>
-                    <option value="Carmel">Carmel, CA</option>
-                    <option value="Gilroy">Gilroy, CA</option>
-                </select>
-            </div>
-        </div>
-    </section>
-
-    <!-- PROVIDERS SECTION -->
-    <section id="providers" class="max-w-7xl mx-auto px-6 py-16">
-        <div class="flex items-center justify-between mb-8">
-            <h2 class="text-4xl font-semibold tracking-tight">Available Providers</h2>
-            <div id="current-city" class="text-sky-400 font-medium text-xl">Monterey, CA</div>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="providers-grid">
-            <!-- Populated by JS -->
-        </div>
-        
-        <div class="mt-12 text-xs text-zinc-500 flex items-center gap-x-2">
-            <div class="flex-1 h-px bg-zinc-800"></div>
-            <div>Data from FCC Broadband Map (updated 2026) + provider websites • Prices starting after promo • Actual speeds vary by address</div>
-            <div class="flex-1 h-px bg-zinc-800"></div>
-        </div>
-    </section>
-
-    <!-- BOOK APPOINTMENT -->
-    <section id="book" class="bg-zinc-900 py-16">
-        <div class="max-w-4xl mx-auto px-6">
-            <div class="grid md:grid-cols-5 gap-10">
-                <!-- Calendar -->
-                <div class="md:col-span-3 bg-black rounded-3xl p-8">
-                    <h3 class="text-3xl font-semibold mb-6">Live Appointment Calendar</h3>
-                    <div class="mb-6">
-                        <label class="block text-sm text-zinc-400 mb-2">Select Date</label>
-                        <input type="date" id="appt-date" 
-                               class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-6 py-4 text-lg focus:outline-none focus:border-sky-500">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm text-zinc-400 mb-3">Available Time Slots</label>
-                        <div class="grid grid-cols-3 gap-3" id="time-slots">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">Call 1-800-288-2020 (account owner only)</div>
+                  <div class="step-desc">Only the account holder can cancel. Have your <strong>account number</strong> and <strong>PIN</strong> ready (found on your paper bill or online account). Call during business hours — cancellation requests received when AT&amp;T is closed are processed the next business day. Say clearly: <em>"I want to cancel my AT&amp;T Internet service."</em><span class="step-tip">💡 Alternatively, visit any AT&amp;T retail store in person with your account info and leased equipment.</span></div>
                 </div>
-
-                <!-- Form -->
-                <div class="md:col-span-2 bg-black rounded-3xl p-8">
-                    <h3 class="text-3xl font-semibold mb-6">Book with Us</h3>
-                    <form id="booking-form" onsubmit="handleBooking(event)" class="space-y-6">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs text-zinc-400 mb-1">FIRST NAME</label>
-                                <input type="text" id="first-name" required 
-                                       class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-zinc-400 mb-1">LAST NAME</label>
-                                <input type="text" id="last-name" required 
-                                       class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none">
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-xs text-zinc-400 mb-1">EMAIL</label>
-                            <input type="email" id="email" required 
-                                   class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-xs text-zinc-400 mb-1">PHONE</label>
-                            <input type="tel" id="phone" required 
-                                   class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-xs text-zinc-400 mb-1">CITY</label>
-                            <select id="form-city" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none">
-                                <option>Monterey</option>
-                                <option>Salinas</option>
-                                <option>Capitola</option>
-                                <option>Carmel</option>
-                                <option>Gilroy</option>
-                            </select>
-                        </div>
-                        
-                        <button type="submit"
-                                class="w-full bg-sky-500 hover:bg-sky-600 transition-colors text-black font-semibold text-lg py-5 rounded-3xl mt-4">
-                            CONFIRM APPOINTMENT
-                        </button>
-                        
-                        <p class="text-center text-xs text-zinc-500">📍 We come to you • Free site survey included</p>
-                    </form>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">Decline retention offers &amp; confirm your end date</div>
+                  <div class="step-desc">The agent will likely offer discounts or plan changes. If you want to cancel, stay firm. Confirm the exact <strong>service end date</strong> and ask for a <strong>cancellation confirmation number</strong> or email receipt. Note the agent's name for your records.</div>
                 </div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <div class="step-title">Get your equipment return authorization number</div>
+                  <div class="step-desc">AT&amp;T will provide a <strong>Return Authorization (RA) number</strong> and a prepaid UPS shipping label (mailed within 7–10 days). You must return all leased equipment — gateway, modem, Wi-Fi extenders — within <strong>21 days</strong> of cancellation. Unreturned equipment fees range from $75–$200+ per device.<span class="step-tip">💡 You can also return equipment in person at an AT&amp;T store and get immediate confirmation.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                  <div class="step-title">Ship equipment via UPS &amp; keep your receipt</div>
+                  <div class="step-desc">Pack the gateway, power cords, and all accessories securely. Drop off at any UPS location. <strong>Write down your RA number</strong> and keep the UPS tracking receipt. Track the shipment to confirm AT&amp;T receives it.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">6</div>
+                <div class="step-body">
+                  <div class="step-title">Verify your final bill &amp; watch for surprise charges</div>
+                  <div class="step-desc">Your final bill arrives 2–3 weeks after cancellation. Review every line. If unexpected charges appear, call and say <em>"dispute charge"</em> to reach the billing department. Keep all receipts, confirmation numbers, and the UPS tracking number for at least 90 days.</div>
+                </div>
+              </div>
             </div>
-            
-            <div id="booking-success" class="hidden mt-8 bg-emerald-900/50 border border-emerald-500 rounded-3xl p-6 text-center">
-                <p class="text-emerald-400 font-medium">✅ Appointment saved to live JSON storage!</p>
-                <p class="text-sm text-zinc-400 mt-2">Real-time update successful. You will receive a confirmation email shortly.</p>
+          </div>
+          <div class="can-info">
+            <div class="can-box">
+              <h4>📞 Contact Methods</h4>
+              <ul>
+                <li><strong>Phone:</strong> 1-800-288-2020 (business hours)</li>
+                <li><strong>In-Store:</strong> Any AT&amp;T retail location</li>
+                <li class="warnrow">Online cancellation <strong>not available</strong> for fiber/internet</li>
+              </ul>
             </div>
-        </div>
-    </section>
-
-    <!-- OUTAGES SECTION -->
-    <section id="outages" class="max-w-7xl mx-auto px-6 py-16">
-        <h2 class="text-4xl font-semibold tracking-tight mb-8">Live Internet Outages (Downdetector Public Data)</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="outages-grid">
-            <!-- Populated by JS -->
-        </div>
-        <div class="mt-8 text-xs text-zinc-500 text-center">
-            Sourced directly from Downdetector.com (March 2026) • No current problems reported • 30-day trend: Normal across all providers
-        </div>
-    </section>
-
-    <!-- FIBER NEWS -->
-    <section id="news" class="bg-black py-16">
-        <div class="max-w-7xl mx-auto px-6">
-            <h2 class="text-4xl font-semibold tracking-tight mb-8">Latest Fiber Optic News • Monterey County (Major Carriers, Jan 2025–Today)</h2>
-            <div class="space-y-8" id="news-list">
-                <!-- Populated by JS -->
+            <div class="can-box">
+              <h4>💰 Fees to Know</h4>
+              <ul>
+                <li class="okrow"><strong>Internet-only plans:</strong> No ETF</li>
+                <li><strong>Bundles (TV/Phone):</strong> Up to $360 ETF</li>
+                <li class="warnrow"><strong>Unreturned equipment:</strong> $75–$200+/device</li>
+                <li><strong>Final bill:</strong> Not prorated (full last month)</li>
+                <li class="okrow"><strong>Within 14 days:</strong> Cancel free, no ETF</li>
+              </ul>
             </div>
+            <div class="can-box">
+              <h4>📦 Equipment Return</h4>
+              <ul>
+                <li><strong>Deadline:</strong> 21 days from cancellation</li>
+                <li>Prepaid UPS label mailed in 7–10 days</li>
+                <li>Or return in-person at AT&amp;T store</li>
+                <li>Return: modem, gateway, Wi-Fi extenders, all cables</li>
+              </ul>
+            </div>
+            <a class="can-link" href="https://www.att.com/support/how-to/cancellation-policy-internet" target="_blank">
+              <span class="can-link-n">AT&amp;T Cancellation Policy</span>
+              <span class="can-link-a">Official →</span>
+            </a>
+            <a class="can-link" href="https://www.att.com/support/how-to/internet/equipment-return" target="_blank">
+              <span class="can-link-n">AT&amp;T Equipment Return Guide</span>
+              <span class="can-link-a">Official →</span>
+            </a>
+          </div>
         </div>
-    </section>
+      </div>
+    </div>
 
-    <!-- FOOTER -->
-    <footer class="bg-zinc-950 border-t border-zinc-800 py-12">
-        <div class="max-w-7xl mx-auto px-6 text-center text-xs text-zinc-500">
-            <p>Single-file customer portal • All data stored in secure JSONBin (ID: 69a47521ae596e708f5583a1)</p>
-            <p class="mt-2">Providers &amp; speeds from FCC Broadband Map + provider sites • Outages from Downdetector • News with exact quotes from public sources • For demo purposes only</p>
+    <!-- ── XFINITY ── -->
+    <div class="can-panel" id="can-xfin">
+      <div class="canisp" style="--brand:#d4007a">
+        <div class="canisp-head">
+          <div class="canisp-name"><span class="canisp-dot"></span>Xfinity / Comcast</div>
+          <div class="canisp-meta">
+            <span class="cmeta-badge cm-phone">Phone</span>
+            <span class="cmeta-badge cm-online">Online Form</span>
+            <span class="cmeta-badge cm-store">In-Store</span>
+            <span class="cmeta-badge cm-fee">ETF if Under Contract</span>
+          </div>
         </div>
-    </footer>
+        <div class="canisp-body">
+          <div class="can-steps">
+            <h3>Step-by-Step: How to Cancel Xfinity Internet</h3>
+            <div class="step-list">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">Review your contract at xfinity.com/cancel</div>
+                  <div class="step-desc">Log in and visit <a href="https://www.xfinity.com/cancel" target="_blank">xfinity.com/cancel</a>. Check Account → Account and Identity → Legal Agreements to see if you're under contract. ETFs are typically <strong>$10–$20 per remaining month</strong>. Note your billing cycle — Xfinity does not prorate final bills.<span class="step-tip">💡 Canceling internet may change pricing on any bundled TV or Xfinity Mobile plans.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">Choose your cancellation method</div>
+                  <div class="step-desc">You have three options:
+                    <br>• <strong>Phone:</strong> Call <a href="tel:18009346489">1-800-XFINITY (1-800-934-6489)</a> — say "cancel service" at the prompt
+                    <br>• <strong>Online:</strong> Use the form at <a href="https://www.xfinity.com/cancel" target="_blank">xfinity.com/cancel</a> to schedule cancellation (a rep may follow up to confirm)
+                    <br>• <strong>In-Person:</strong> Visit any <a href="https://www.xfinity.com/local/store-offers" target="_blank">Xfinity Store</a> — fastest way to confirm cancellation and return equipment on the same visit</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">Be direct with the retention team</div>
+                  <div class="step-desc">You will be transferred to a retention specialist. Do not say "I'm thinking about canceling." Say: <em>"I want to cancel my Xfinity internet service today."</em> They will offer deals — decline politely if your mind is made up. Ask for a <strong>cancellation confirmation number</strong> and the exact <strong>service end date</strong>.<span class="step-tip">💡 Xfinity offers a Seasonal Hold ($7–15/month) if you want to pause rather than cancel entirely.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <div class="step-title">Return your equipment immediately</div>
+                  <div class="step-desc">Return all rented equipment (modem, router, cable boxes) to avoid fees. You have two options:
+                    <br>• <strong>UPS Store drop-off</strong> (free, no box needed — Xfinity handles packaging)
+                    <br>• <strong>Xfinity Store drop-off</strong> (get an instant receipt)<br>
+                    Always <strong>get a receipt</strong> and keep it. Equipment fee is typically $110–$330 per unreturned device.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                  <div class="step-title">Watch for your final bill</div>
+                  <div class="step-desc">Expect your final bill 2–4 weeks after cancellation. If Xfinity owes you a credit balance, refunds are automatically processed to your last payment method <strong>within 4–6 weeks</strong>. Dispute any incorrect charges through Xfinity's billing department.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="can-info">
+            <div class="can-box">
+              <h4>📞 Contact Methods</h4>
+              <ul>
+                <li><strong>Phone:</strong> 1-800-934-6489 (1-800-XFINITY)</li>
+                <li><strong>Online:</strong> xfinity.com/cancel (schedule form)</li>
+                <li><strong>In-Store:</strong> Nearest Xfinity Store</li>
+                <li><strong>Live Chat:</strong> xfinity.com → Chat with Agent</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>💰 Fees to Know</h4>
+              <ul>
+                <li><strong>ETF (if under contract):</strong> $10–$20/mo remaining</li>
+                <li class="warnrow"><strong>Unreturned equipment:</strong> $110–$330/device</li>
+                <li><strong>Final bill:</strong> Not prorated</li>
+                <li class="okrow"><strong>Credit balance refund:</strong> 4–6 weeks</li>
+                <li class="okrow"><strong>Seasonal Hold option:</strong> $7–15/mo to pause</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>📦 Equipment Return</h4>
+              <ul>
+                <li>UPS Store — free drop-off, no packaging needed</li>
+                <li>Xfinity Store — instant confirmation receipt</li>
+                <li>Return: modem, router, cable boxes, remotes</li>
+                <li class="warnrow">Always get a receipt — keep for 90 days</li>
+              </ul>
+            </div>
+            <a class="can-link" href="https://www.xfinity.com/cancel" target="_blank">
+              <span class="can-link-n">Xfinity Cancel or Transfer Service</span>
+              <span class="can-link-a">Official →</span>
+            </a>
+            <a class="can-link" href="https://www.xfinity.com/support/articles/important-information-when-canceling-services" target="_blank">
+              <span class="can-link-n">What to Know When Canceling Xfinity</span>
+              <span class="can-link-a">Official →</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
-    <script>
-        // ==================== TAILWIND INIT ====================
-        function initTailwind() {
-            tailwind.config = { content: [], theme: { extend: {} } }
-        }
+    <!-- ── T-MOBILE ── -->
+    <div class="can-panel" id="can-tmob">
+      <div class="canisp" style="--brand:#e4002b">
+        <div class="canisp-head">
+          <div class="canisp-name"><span class="canisp-dot"></span>T-Mobile Home Internet</div>
+          <div class="canisp-meta">
+            <span class="cmeta-badge cm-phone">Phone / Chat</span>
+            <span class="cmeta-badge cm-store">T-Mobile Store</span>
+            <span class="cmeta-badge cm-nofee">No ETF (No-Contract)</span>
+          </div>
+        </div>
+        <div class="canisp-body">
+          <div class="can-steps">
+            <h3>Step-by-Step: How to Cancel T-Mobile Home Internet</h3>
+            <div class="step-list">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">Confirm you have no contract penalty</div>
+                  <div class="step-desc">T-Mobile Home Internet is a <strong>no-contract, month-to-month service</strong> — there is no Early Termination Fee. Your service runs through the end of your current billing cycle. Log in at <a href="https://account.t-mobile.com/" target="_blank">account.t-mobile.com</a> or the T-Mobile app to review billing dates.<span class="step-tip">💡 If you recently switched from another ISP and paid an ETF, T-Mobile may reimburse up to $750 via prepaid Mastercard — check within 60 days of activation.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">Contact T-Mobile to cancel</div>
+                  <div class="step-desc">You cannot cancel T-Mobile Home Internet online — you must contact support directly. Options:
+                    <br>• <strong>Call:</strong> <a href="tel:18006461642">1-800-TMOBILE (1-800-862-6453)</a> — say "cancel home internet"
+                    <br>• <strong>Chat:</strong> T-Mobile app or t-mobile.com live chat
+                    <br>• <strong>In-Store:</strong> Visit any T-Mobile retail location<br>
+                    Have your <strong>account number</strong> and the primary account holder available.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">Confirm cancellation &amp; disable autopay</div>
+                  <div class="step-desc">Ask the representative to confirm the cancellation and provide a confirmation number. Also ask them to confirm <strong>autopay is removed</strong> from your card. If your Home Internet is bundled with a wireless line, confirm that only the Home Internet line is canceled.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <div class="step-title">Return the 5G Gateway device</div>
+                  <div class="step-desc">T-Mobile will send a prepaid return shipping box. Return the <strong>5G Gateway (router/modem combo)</strong> and all accessories within the specified window (typically 15–30 days). Drop off at UPS. Unreturned gateway fees can be $370+ for the device cost.<span class="step-tip">💡 T-Mobile Home Internet uses no outside modem — the Gateway is proprietary. Don't forget to factory reset it before boxing it up.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                  <div class="step-title">Verify final bill</div>
+                  <div class="step-desc">Your last bill will cover service through the end of your billing cycle. Review for any unexpected charges. Contact T-Mobile billing at the same number if anything is incorrect.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="can-info">
+            <div class="can-box">
+              <h4>📞 Contact Methods</h4>
+              <ul>
+                <li><strong>Phone:</strong> 1-800-862-6453 (T-MOBILE)</li>
+                <li><strong>App/Chat:</strong> T-Mobile app or website</li>
+                <li><strong>In-Store:</strong> Any T-Mobile retail location</li>
+                <li class="warnrow">Online self-cancel <strong>not available</strong></li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>💰 Fees to Know</h4>
+              <ul>
+                <li class="okrow"><strong>No ETF</strong> — month-to-month plan</li>
+                <li class="okrow"><strong>No annual contract</strong> required</li>
+                <li class="warnrow"><strong>Unreturned Gateway:</strong> ~$370+</li>
+                <li><strong>Final bill:</strong> Covers full billing cycle</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>📦 Equipment Return</h4>
+              <ul>
+                <li>Return: 5G Gateway + power cord</li>
+                <li>Prepaid box sent by T-Mobile</li>
+                <li>Drop off at UPS — keep receipt</li>
+                <li>Factory reset gateway before shipping</li>
+              </ul>
+            </div>
+            <a class="can-link" href="https://www.t-mobile.com/support/account/cancel-service" target="_blank">
+              <span class="can-link-n">T-Mobile Cancel Service Support</span>
+              <span class="can-link-a">Official →</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // ==================== PROVIDERS DATA (FCC + provider sites – covers EVERY city) ====================
-        const providersData = {
-            Monterey: [
-                { name: "AT&amp;T Fiber", type: "Fiber", speed: "Up to 5 Gbps", price: "From $55/mo", avail: "89%", note: "FCC + AT&amp;T" },
-                { name: "Xfinity", type: "Cable", speed: "Up to 2 Gbps", price: "From $40/mo", avail: "95%", note: "FCC + Xfinity" },
-                { name: "Spectrum", type: "Cable", speed: "Up to 1 Gbps", price: "From $50/mo", avail: "33%", note: "FCC + Spectrum" },
-                { name: "T-Mobile Home", type: "5G", speed: "Up to 415 Mbps", price: "From $50/mo", avail: "37%", note: "FCC" }
-            ],
-            Salinas: [
-                { name: "AT&amp;T Fiber", type: "Fiber", speed: "Up to 5 Gbps", price: "From $55/mo", avail: "85%", note: "FCC + AT&amp;T" },
-                { name: "Xfinity", type: "Cable", speed: "Up to 2 Gbps", price: "From $20/mo", avail: "90%", note: "FCC + Xfinity" },
-                { name: "Spectrum", type: "Cable", speed: "Up to 2 Gbps", price: "From $30/mo", avail: "70%", note: "FCC + Spectrum" }
-            ],
-            Capitola: [
-                { name: "Spectrum", type: "Cable", speed: "Up to 1 Gbps", price: "From $50/mo", avail: "95%", note: "FCC + Spectrum" },
-                { name: "Xfinity", type: "Cable", speed: "Up to 2 Gbps", price: "From $40/mo", avail: "80%", note: "FCC + Xfinity" },
-                { name: "AT&amp;T Fiber", type: "Fiber", speed: "Up to 5 Gbps", price: "From $55/mo", avail: "65%", note: "FCC + AT&amp;T" }
-            ],
-            Carmel: [
-                { name: "Xfinity", type: "Cable", speed: "Up to 2 Gbps", price: "From $40/mo", avail: "100%", note: "FCC + Xfinity" },
-                { name: "AT&amp;T Fiber", type: "Fiber", speed: "Up to 5 Gbps", price: "From $55/mo", avail: "75%", note: "FCC + AT&amp;T" },
-                { name: "EarthLink", type: "Fiber", speed: "Up to 1 Gbps", price: "From $40/mo", avail: "25%", note: "FCC" }
-            ],
-            Gilroy: [
-                { name: "Frontier Fiber", type: "Fiber", speed: "Up to 7 Gbps", price: "From $50/mo", avail: "99%", note: "FCC + Frontier" },
-                { name: "Spectrum", type: "Cable", speed: "Up to 2 Gbps", price: "From $30/mo", avail: "83%", note: "FCC + Spectrum" },
-                { name: "AT&amp;T", type: "IPBB", speed: "Up to 300 Mbps", price: "From $45/mo", avail: "26%", note: "FCC" }
-            ]
-        }
+    <!-- ── STARLINK ── -->
+    <div class="can-panel" id="can-star">
+      <div class="canisp" style="--brand:#7c3aed">
+        <div class="canisp-head">
+          <div class="canisp-name"><span class="canisp-dot"></span>Starlink</div>
+          <div class="canisp-meta">
+            <span class="cmeta-badge cm-online">100% Online</span>
+            <span class="cmeta-badge cm-nofee">No Cancellation Fee</span>
+          </div>
+        </div>
+        <div class="canisp-body">
+          <div class="can-steps">
+            <h3>Step-by-Step: How to Cancel Starlink</h3>
+            <div class="step-list">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">Log in at starlink.com (browser, not app)</div>
+                  <div class="step-desc">Go to <a href="https://www.starlink.com" target="_blank">starlink.com</a> and sign in. Note: the cancellation option is only available via the <strong>web browser account portal</strong> — not the Starlink mobile app. Click the menu icon (≡) at the top right, then Sign In.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">Navigate to Manage → Cancel Service</div>
+                  <div class="step-desc">In the <strong>YOUR STARLINKS</strong> section, find your active device and click <strong>MANAGE</strong>. On the next page, click <strong>CANCEL SERVICE</strong> (on the left sidebar). A pop-up will ask you to confirm cancellation. Read the warning — <strong>reactivation is not guaranteed</strong> in high-demand areas like much of the Central Coast.<span class="step-tip">💡 Cancel before your invoice generation date to avoid being billed for the next month. Service stays active through the end of your current billing period.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">Optionally check the "return hardware" box</div>
+                  <div class="step-desc">If you want to return the kit: check <strong>"I would like to return my hardware"</strong> before confirming. SpaceX will email you a prepaid return shipping label. You <strong>own the dish</strong> — returns are only necessary if you want a refund (within 30 days) or if you rented the kit.
+                  <br><br>• <strong>Within 30 days:</strong> Full hardware refund (minus shipping)
+                  <br>• <strong>31–365 days (US only):</strong> $200 partial refund
+                  <br>• <strong>After 365 days:</strong> No refund, but you can sell the dish to another user in a Starlink coverage area</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <div class="step-title">Stow the dish for shipping (if returning)</div>
+                  <div class="step-desc">Power on the Starlink dish. Remove the metal base. Place the dish flat on the ground (flat side down, leg up) and wait a few minutes — the mast will <strong>automatically tilt into stow position</strong>. Pack in the original box or a sturdy replacement with padding. Include all cables and accessories.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                  <div class="step-title">Confirm &amp; monitor refund</div>
+                  <div class="step-desc">Once Starlink receives and inspects the returned hardware, your refund is issued to your original payment method. There are no monthly cancellation fees of any kind. No phone calls needed — the entire process is self-service online.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="can-info">
+            <div class="can-box">
+              <h4>📞 Contact Methods</h4>
+              <ul>
+                <li class="okrow"><strong>100% online self-service</strong> at starlink.com</li>
+                <li><strong>Support:</strong> starlink.com/support (ticket only)</li>
+                <li>No phone support available</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>💰 Fees to Know</h4>
+              <ul>
+                <li class="okrow"><strong>No cancellation fee</strong></li>
+                <li class="okrow"><strong>No ETF</strong> — month-to-month</li>
+                <li class="okrow"><strong>Within 30 days:</strong> Full hardware refund</li>
+                <li><strong>31–365 days (US):</strong> $200 partial refund</li>
+                <li class="warnrow">Reactivation not guaranteed in busy areas</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>📦 Equipment Notes</h4>
+              <ul>
+                <li><strong>You own the dish</strong> — no forced return</li>
+                <li>Return within 30 days for full refund</li>
+                <li>Dish auto-stows when powered on</li>
+                <li>Can sell/transfer to another user in coverage area</li>
+                <li>Roam plan: pause with $5/mo Standby Mode</li>
+              </ul>
+            </div>
+            <a class="can-link" href="https://www.starlink.com" target="_blank">
+              <span class="can-link-n">Starlink Account Portal</span>
+              <span class="can-link-a">Cancel Online →</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // ==================== OUTAGES – REAL DATA FROM DOWNDTECTOR (March 2026) ====================
-        // No current problems reported for any major provider (direct from public pages)
-        let outagesData = [
-            { provider: "AT&amp;T", reports: 0, status: "No problems", color: "emerald" },
-            { provider: "Xfinity", reports: 0, status: "No problems", color: "emerald" },
-            { provider: "Spectrum", reports: 0, status: "No problems", color: "emerald" },
-            { provider: "Frontier", reports: 0, status: "No problems", color: "emerald" }
-        ]
+    <!-- ── FRONTIER ── -->
+    <div class="can-panel" id="can-fron">
+      <div class="canisp" style="--brand:#ff6b00">
+        <div class="canisp-head">
+          <div class="canisp-name"><span class="canisp-dot"></span>Frontier Fiber</div>
+          <div class="canisp-meta">
+            <span class="cmeta-badge cm-phone">Phone Only</span>
+            <span class="cmeta-badge cm-fee">$9.99 Disconnect Fee</span>
+          </div>
+        </div>
+        <div class="canisp-body">
+          <div class="can-steps">
+            <h3>Step-by-Step: How to Cancel Frontier Internet</h3>
+            <div class="step-list">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">Review your plan &amp; outstanding balance</div>
+                  <div class="step-desc">Log in at <a href="https://frontier.com/resources/my-account" target="_blank">frontier.com</a> or the MyFrontier app. Fiber-only plans have <strong>no annual contract</strong> as of 2025 — no ETF applies. If you signed up before 2020 with a bundle, ETFs of <strong>$200–$400</strong> may still apply. Clear any outstanding balance before calling — Frontier will auto-draft your card if autopay is enabled.<span class="step-tip">💡 Frontier adds a <strong>$9.99 residential broadband processing fee</strong> to every cancellation. This is unavoidable (waived only if canceling within 30 days of activation).</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">Call 1-800-921-8101 and ask for the Retention Department</div>
+                  <div class="step-desc">Frontier <strong>cannot be canceled online or in-store</strong> — phone is the only method. Have your <strong>account number, PIN, service address, and phone number</strong> ready. Ask specifically for the <strong>Retention Department</strong>. They will try to keep you — stay firm. A reliable phrase: <em>"I am moving to an area outside Frontier's service area."</em><span class="step-tip">💡 If the rep keeps pushing plan upgrades, you may say "I'm moving internationally" — once stated, agents are required to stop the sales pitch and process the cancellation.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">Set your specific end date &amp; get confirmation</div>
+                  <div class="step-desc">Specify the exact date you want service to end. Remember: <strong>final bills are not prorated</strong>, so you'll pay for the full last month regardless. Get the agent's name, a <strong>ticket/confirmation number</strong>, and ask for an emailed receipt. Call back later to confirm the cancellation was actually processed.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <div class="step-title">Request your prepaid UPS return box</div>
+                  <div class="step-desc">Ask the agent to send you a <strong>prepaid UPS return box</strong> — it arrives within 5–7 days. Frontier does <strong>not allow in-store equipment drop-off</strong>; all returns are by UPS mail only. Pack the router, modem, and all cables. Return within <strong>30 days</strong> of cancellation to avoid replacement fees.<span class="step-tip">💡 Equipment fees are $100–$200 per device. Keep your UPS drop-off receipt until you confirm the final bill shows no equipment charges.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                  <div class="step-title">Monitor your account for up to 3 final bills</div>
+                  <div class="step-desc">Frontier customers sometimes receive <strong>up to 3 bills</strong> after cancellation as the account closes. Review each one carefully. If any charges are incorrect, call the retention number and reference your confirmation number. Pay disputed amounts only after exhausting the dispute process — unpaid bills may go to collections.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="can-info">
+            <div class="can-box">
+              <h4>📞 Contact Methods</h4>
+              <ul>
+                <li><strong>Phone:</strong> 1-800-921-8101</li>
+                <li>Ask for: Retention Department</li>
+                <li class="warnrow">Online / in-store cancellation <strong>not available</strong></li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>💰 Fees to Know</h4>
+              <ul>
+                <li class="warnrow"><strong>$9.99 processing fee</strong> on every cancellation</li>
+                <li class="okrow"><strong>No ETF</strong> on current fiber-only plans</li>
+                <li><strong>Legacy bundle contracts:</strong> $200–$400 ETF</li>
+                <li><strong>Final bill:</strong> Not prorated (full last month)</li>
+                <li class="warnrow"><strong>Unreturned equipment:</strong> $100–$200/device</li>
+                <li class="okrow"><strong>Within 30 days:</strong> No fees at all</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>📦 Equipment Return</h4>
+              <ul>
+                <li>UPS mail-back only (no in-store drop-off)</li>
+                <li>Prepaid box arrives in 5–7 days</li>
+                <li>Return within 30 days of cancellation</li>
+                <li>Return: router, modem, all cables</li>
+              </ul>
+            </div>
+            <a class="can-link" href="https://frontier.com/resources/cancel-service" target="_blank">
+              <span class="can-link-n">Frontier Cancel Service Page</span>
+              <span class="can-link-a">Official →</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // ==================== FIBER NEWS – REAL DATA + EXACT QUOTES (Jan 2025 – March 2026, Monterey County focus) ====================
-        const fiberNews = [
-            {
-                title: "Upgrading California’s Network for More Connectivity",
-                link: "https://www.attconnects.com/stories/upgrading-californias-network-for-more-connectivity/",
-                summary: "October 2025 — Central Coast region, including Monterey, Salinas and Watsonville: “we’ve grown access to AT&amp;T Fiber by adding more than 2,000 customer locations.”"
-            },
-            {
-                title: "CPUC Expands Broadband Access Statewide with Approval of Projects",
-                link: "https://www.cpuc.ca.gov/news-and-updates/all-news/cpuc-expands-broadband-access-statewide-with-approval-of-projects",
-                summary: "January 15, 2026 — Monterey County: California Broadband Alliance — Surfnet-Salinas Project. “We look forward to working with Surfnet Communications, our ISP partner for this grant, to use these funds to help close the digital divide in Salinas and the greater Monterey region.”"
-            },
-            {
-                title: "Spectrum Rural Construction Initiative Update",
-                link: "https://www.spectrum.com/cp/build",
-                summary: "As of July 2025: Spectrum’s multi-year Rural Construction Initiative “will ultimately add an additional 100,000+ miles of fiber-optic network infrastructure and deliver multi-gigabit speed Internet access to more than 1.7 million new locations across the country.”"
-            }
-        ]
+    <!-- ── VERIZON ── -->
+    <div class="can-panel" id="can-verz">
+      <div class="canisp" style="--brand:#cd040b">
+        <div class="canisp-head">
+          <div class="canisp-name"><span class="canisp-dot"></span>Verizon Home Internet / 5G</div>
+          <div class="canisp-meta">
+            <span class="cmeta-badge cm-phone">Phone</span>
+            <span class="cmeta-badge cm-online">My Verizon App</span>
+            <span class="cmeta-badge cm-nofee">No ETF (Most Plans)</span>
+          </div>
+        </div>
+        <div class="canisp-body">
+          <div class="can-steps">
+            <h3>Step-by-Step: How to Cancel Verizon Home Internet</h3>
+            <div class="step-list">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">Check your plan type &amp; billing date</div>
+                  <div class="step-desc">Log in at <a href="https://www.verizon.com/home/myverizon/" target="_blank">My Verizon</a> (myverizon.com) or the My Verizon app. Verizon 5G Home Internet and LTE Home Internet are <strong>no-contract, month-to-month</strong> — no ETF. Review your billing cycle date since cancellation typically takes effect at the end of the billing period.<span class="step-tip">💡 If you have Verizon wireless lines bundled with home internet, canceling internet may affect your wireless discounts — confirm with the rep before finalizing.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">Cancel via My Verizon app or by phone</div>
+                  <div class="step-desc">Options to cancel:
+                    <br>• <strong>My Verizon app:</strong> Account → Manage Plan → Cancel
+                    <br>• <strong>Phone:</strong> Call <a href="tel:18009220204">1-800-VERIZON (1-800-922-0204)</a> — say "cancel home internet"
+                    <br>• <strong>Chat:</strong> verizon.com live chat<br>
+                    Have your <strong>account number and PIN</strong> ready. Only the account owner can cancel.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">Request cancellation confirmation</div>
+                  <div class="step-desc">Ask for a <strong>confirmation number</strong> and the exact service end date. If canceling by phone, also request a confirmation email. Note the representative's name.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <div class="step-title">Return the 5G router / LTE gateway</div>
+                  <div class="step-desc">Verizon 5G Home routers and LTE gateways must be returned. Verizon will mail a prepaid return box. Return within the specified window (typically 30 days). You can also visit a Verizon store to return in person — bring a receipt.<span class="step-tip">💡 If you own your equipment (bought outright), you don't need to return it. Only Verizon-leased devices must be returned.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                  <div class="step-title">Review final bill</div>
+                  <div class="step-desc">Check your final statement in the My Verizon app. Ensure autopay is removed so no additional charges occur. Dispute any unexpected fees through 1-800-VERIZON or via the app's support chat.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="can-info">
+            <div class="can-box">
+              <h4>📞 Contact Methods</h4>
+              <ul>
+                <li><strong>Phone:</strong> 1-800-922-0204</li>
+                <li><strong>App:</strong> My Verizon — Account → Manage Plan</li>
+                <li><strong>Chat:</strong> verizon.com</li>
+                <li><strong>In-Store:</strong> Verizon retail locations</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>💰 Fees to Know</h4>
+              <ul>
+                <li class="okrow"><strong>No ETF</strong> on 5G/LTE Home Internet</li>
+                <li class="okrow"><strong>No annual contract</strong></li>
+                <li class="warnrow"><strong>Bundled wireless discount</strong> may be affected</li>
+                <li><strong>Unreturned device:</strong> Charged at full retail value</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>📦 Equipment Return</h4>
+              <ul>
+                <li>5G Home Router or LTE Gateway must be returned</li>
+                <li>Prepaid box mailed by Verizon</li>
+                <li>Or return in-person at Verizon store</li>
+                <li>30-day return window typical</li>
+              </ul>
+            </div>
+            <a class="can-link" href="https://www.verizon.com/support/residential/account/manage-account/cancel-service" target="_blank">
+              <span class="can-link-n">Verizon Cancel Service Support</span>
+              <span class="can-link-a">Official →</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // ==================== JSONBIN CONFIG ====================
-        const BIN_ID = "69a47521ae596e708f5583a1"
-        const MASTER_KEY = "$2a$10$Lefx.WRLGcnqEKS05CRyyusMdonx4ykv03Tc1DkJt16vt3P3J940K"
-        const API_BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`
+    <!-- ── CRUZIO ── -->
+    <div class="can-panel" id="can-cru">
+      <div class="canisp" style="--brand:#059669">
+        <div class="canisp-head">
+          <div class="canisp-name"><span class="canisp-dot"></span>Cruzio Internet (Local ISP)</div>
+          <div class="canisp-meta">
+            <span class="cmeta-badge cm-phone">Phone / Email</span>
+            <span class="cmeta-badge cm-nofee">No ETF</span>
+          </div>
+        </div>
+        <div class="canisp-body">
+          <div class="can-steps">
+            <h3>Step-by-Step: How to Cancel Cruzio Internet</h3>
+            <div class="step-list">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">Review your account at cruzio.com</div>
+                  <div class="step-desc">Log in at <a href="https://www.cruzio.com" target="_blank">cruzio.com</a> and confirm your billing cycle and any equipment you have. Cruzio is a local Santa Cruz/Monterey County ISP — month-to-month plans with <strong>no early termination fees</strong>.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">Call or email Cruzio support</div>
+                  <div class="step-desc">Contact Cruzio's local support team directly:
+                    <br>• <strong>Phone:</strong> <a href="tel:18312591000">(831) 459-6301</a>
+                    <br>• <strong>Email:</strong> <a href="mailto:help@cruzio.com">help@cruzio.com</a>
+                    <br>• <strong>Chat:</strong> cruzio.com website chat<br>
+                    As a local ISP, Cruzio's customer service is generally responsive and cancellations are straightforward. Provide your account number and service address.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">Confirm end date &amp; get written confirmation</div>
+                  <div class="step-desc">Ask for an email confirmation of your cancellation and the final service date. Confirm whether any equipment (like a Cruzio-provided router) needs to be returned and the timeline for return.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <div class="step-title">Return any equipment &amp; review final bill</div>
+                  <div class="step-desc">Return any Cruzio-provided equipment per their instructions. Cruzio will send a final bill for service through the end of your billing period. As a local provider, billing disputes are typically resolved quickly by phone.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="can-info">
+            <div class="can-box">
+              <h4>📞 Contact Methods</h4>
+              <ul>
+                <li><strong>Phone:</strong> (831) 459-6301</li>
+                <li><strong>Email:</strong> help@cruzio.com</li>
+                <li><strong>Website:</strong> cruzio.com</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>💰 Fees to Know</h4>
+              <ul>
+                <li class="okrow"><strong>No ETF</strong> — month-to-month</li>
+                <li class="okrow">Local ISP — generally customer-friendly</li>
+                <li>Equipment return per individual agreement</li>
+              </ul>
+            </div>
+            <a class="can-link" href="https://www.cruzio.com/support/" target="_blank">
+              <span class="can-link-n">Cruzio Support Center</span>
+              <span class="can-link-a">Contact →</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        async function getBinData() {
-            try {
-                const res = await fetch(API_BASE, { headers: { "X-Master-Key": MASTER_KEY } })
-                if (!res.ok) return { appointments: [] }
-                const json = await res.json()
-                return json.record || { appointments: [] }
-            } catch(e) {
-                console.log("JSONBin read error (demo mode)")
-                return { appointments: [] }
-            }
-        }
+    <!-- ── HUGHESNET ── -->
+    <div class="can-panel" id="can-hnet">
+      <div class="canisp" style="--brand:#d97706">
+        <div class="canisp-head">
+          <div class="canisp-name"><span class="canisp-dot"></span>HughesNet Satellite</div>
+          <div class="canisp-meta">
+            <span class="cmeta-badge cm-phone">Phone Only</span>
+            <span class="cmeta-badge cm-fee">ETF Up to $400</span>
+          </div>
+        </div>
+        <div class="canisp-body">
+          <div class="can-steps">
+            <h3>Step-by-Step: How to Cancel HughesNet</h3>
+            <div class="step-list">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">Check your 24-month contract status</div>
+                  <div class="step-desc">Log in at <a href="https://my.hughesnet.com" target="_blank">my.hughesnet.com</a>. HughesNet typically requires a <strong>24-month contract</strong>. ETFs are <strong>$400 if canceled in year 1</strong>, $200 if canceled in year 2, and $0 after 24 months. Confirm your contract end date before calling.<span class="step-tip">💡 If HughesNet cannot provide service at your new address, the ETF is typically waived — document the service unavailability in writing.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">Call 1-866-347-3292</div>
+                  <div class="step-desc">HughesNet cancellations are <strong>by phone only</strong>. Call <a href="tel:18663473292">1-866-347-3292</a> and say you want to cancel. Be prepared for retention offers. Have your account number and the account holder's name ready. Ask for a <strong>cancellation confirmation number</strong> and email receipt.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">Schedule equipment removal</div>
+                  <div class="step-desc">HughesNet owns the satellite dish and modem — they arrange a technician to remove the dish from your property. This is <strong>typically scheduled within 14–30 days</strong>. You do not ship equipment yourself. Keep the dish powered on and accessible until the technician arrives.<span class="step-tip">💡 Do NOT remove the dish yourself — doing so may result in additional fees. Wait for the HughesNet technician.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <div class="step-title">Review final bill</div>
+                  <div class="step-desc">Your final bill will include any ETF, remaining monthly charges, and processing fees. HughesNet does not prorate final bills. Review your final statement online at my.hughesnet.com and contact billing at the same phone number if anything is incorrect.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="can-info">
+            <div class="can-box">
+              <h4>📞 Contact Methods</h4>
+              <ul>
+                <li><strong>Phone:</strong> 1-866-347-3292</li>
+                <li class="warnrow">Phone cancellation <strong>only</strong> — no online cancel</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>💰 Fees to Know</h4>
+              <ul>
+                <li class="warnrow"><strong>ETF Year 1:</strong> Up to $400</li>
+                <li class="warnrow"><strong>ETF Year 2:</strong> Up to $200</li>
+                <li class="okrow"><strong>After 24 months:</strong> No ETF</li>
+                <li><strong>Final bill:</strong> Not prorated</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>📦 Equipment Return</h4>
+              <ul>
+                <li>Technician removes dish from your home</li>
+                <li><strong>Do NOT remove dish yourself</strong></li>
+                <li>Modem returned at same appointment</li>
+                <li>Scheduled within 14–30 days of cancellation</li>
+              </ul>
+            </div>
+            <a class="can-link" href="https://my.hughesnet.com" target="_blank">
+              <span class="can-link-n">HughesNet My Account</span>
+              <span class="can-link-a">Manage →</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        async function updateBinData(newData) {
-            try {
-                await fetch(API_BASE, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json", "X-Master-Key": MASTER_KEY },
-                    body: JSON.stringify(newData)
-                })
-                console.log("✅ JSONBin updated in real-time")
-            } catch(e) {
-                console.log("JSONBin write error (demo mode)")
-            }
-        }
+    <!-- ── VIASAT ── -->
+    <div class="can-panel" id="can-via">
+      <div class="canisp" style="--brand:#0f766e">
+        <div class="canisp-head">
+          <div class="canisp-name"><span class="canisp-dot"></span>Viasat Satellite</div>
+          <div class="canisp-meta">
+            <span class="cmeta-badge cm-phone">Phone Only</span>
+            <span class="cmeta-badge cm-fee">ETF Up to $500+</span>
+          </div>
+        </div>
+        <div class="canisp-body">
+          <div class="can-steps">
+            <h3>Step-by-Step: How to Cancel Viasat Internet</h3>
+            <div class="step-list">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">Check your contract terms at viasat.com</div>
+                  <div class="step-desc">Log in at <a href="https://www.viasat.com/home-internet/manage" target="_blank">viasat.com</a>. Viasat plans typically have a <strong>24-month commitment</strong>. ETFs vary by plan — commonly <strong>$15–$19 per remaining month</strong>, with a maximum around $500+. Confirm your exact contract end date and ETF amount before calling.<span class="step-tip">💡 If you're moving and Viasat is unavailable at your new address, provide written proof — this often results in ETF waiver.</span></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">Call 1-855-463-9333</div>
+                  <div class="step-desc">Viasat cancellations are <strong>by phone only</strong>. Call <a href="tel:18554639333">1-855-463-9333</a>. Have your <strong>account number, billing address, and the account holder's full name</strong> ready. Only the account owner can cancel. Be direct: <em>"I want to cancel my Viasat service and need a cancellation confirmation number."</em></div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">Confirm ETF amount &amp; get written confirmation</div>
+                  <div class="step-desc">Ask the rep to confirm the exact ETF, your final bill amount, and the service end date. Request a <strong>confirmation email</strong> immediately after the call. If no email arrives within 24 hours, call back to confirm the cancellation was filed.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <div class="step-title">Schedule dish removal (equipment is leased)</div>
+                  <div class="step-desc">Viasat owns the dish and modem — a technician will schedule a removal visit. Do <strong>not remove the dish yourself</strong>. The modem is typically returned by prepaid shipping label. Confirm the return window (usually within 30 days of cancellation) to avoid being charged for unreturned equipment.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                  <div class="step-title">Review final bill &amp; confirm no recurring charges</div>
+                  <div class="step-desc">Viasat final bills include the ETF, remaining monthly service, and any equipment fees. Review at viasat.com or via your emailed statement. Cancel any bank or card authorizations — Viasat uses autopay aggressively and you want to confirm charges stop after the final bill.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="can-info">
+            <div class="can-box">
+              <h4>📞 Contact Methods</h4>
+              <ul>
+                <li><strong>Phone:</strong> 1-855-463-9333</li>
+                <li class="warnrow">Phone cancellation <strong>only</strong> — no online cancel</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>💰 Fees to Know</h4>
+              <ul>
+                <li class="warnrow"><strong>ETF:</strong> $15–19/remaining month (up to $500+)</li>
+                <li><strong>24-month commitment</strong> on most plans</li>
+                <li class="warnrow">Unreturned modem: charged at retail price</li>
+                <li><strong>Final bill:</strong> Not prorated</li>
+                <li class="okrow">ETF waived if service unavailable at new address</li>
+              </ul>
+            </div>
+            <div class="can-box">
+              <h4>📦 Equipment Return</h4>
+              <ul>
+                <li>Dish removed by Viasat technician</li>
+                <li><strong>Do NOT remove dish yourself</strong></li>
+                <li>Modem: prepaid label (return within 30 days)</li>
+                <li>Always get a receipt / tracking number</li>
+              </ul>
+            </div>
+            <a class="can-link" href="https://www.viasat.com/home-internet/manage" target="_blank">
+              <span class="can-link-n">Viasat Manage My Account</span>
+              <span class="can-link-a">Manage →</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // ==================== RENDER PROVIDERS (all cities supported) ====================
-        function renderProviders(city) {
-            const grid = document.getElementById("providers-grid")
-            grid.innerHTML = ""
-            document.getElementById("current-city").textContent = city + ", CA"
-            
-            providersData[city].forEach(p => {
-                const card = document.createElement("div")
-                card.className = "provider-card bg-zinc-900 border border-zinc-800 rounded-3xl p-6"
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <div class="font-semibold text-2xl">${p.name}</div>
-                            <div class="text-sm text-zinc-400">${p.type}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-emerald-400 text-xs font-medium">${p.avail} coverage</div>
-                        </div>
-                    </div>
-                    <div class="text-5xl font-semibold tracking-tighter text-white mb-1">${p.speed}</div>
-                    <div class="text-zinc-400 mb-6">${p.price}</div>
-                    <div class="text-xs bg-zinc-800 inline-block px-4 py-2 rounded-2xl">${p.note}</div>
-                `
-                grid.appendChild(card)
-            })
-        }
+  </div><!-- /cdash -->
+</section>
 
-        function switchCity() {
-            const city = document.getElementById("city-select").value
-            renderProviders(city)
-        }
+<footer>
+  <strong>Monterey Internet Guide</strong> · Independent resource for Monterey County residents<br>
+  Provider data: FCC Broadband Data Collection (June 2025) · Outage data: IsTheServiceDown, IsDown.app, GeoBlackout<br>
+  Cancellation info current as of March 2026 · Appointments stored via JSONBin public API · © 2026 MontereyInternet.guide
+</footer>
+<div class="toast" id="toast"></div>
 
-        // ==================== TIME SLOTS ====================
-        function renderTimeSlots() {
-            const slotsContainer = document.getElementById("time-slots")
-            const times = ["09:00 AM", "10:00 AM", "11:00 AM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM"]
-            slotsContainer.innerHTML = ""
-            times.forEach(time => {
-                const btn = document.createElement("button")
-                btn.className = "bg-zinc-900 hover:bg-sky-900 border border-zinc-700 hover:border-sky-500 transition-all rounded-2xl py-4 text-sm font-medium"
-                btn.textContent = time
-                btn.onclick = () => {
-                    document.querySelectorAll("#time-slots button").forEach(b => b.classList.remove("!bg-sky-500", "!border-sky-500", "!text-black"))
-                    btn.classList.add("!bg-sky-500", "!border-sky-500", "!text-black")
-                    window.selectedTime = time
-                }
-                slotsContainer.appendChild(btn)
-            })
-        }
+<!-- ═══════ JAVASCRIPT ═════════════════════════════════════════ -->
+<script>
+'use strict';
 
-        // ==================== BOOKING HANDLER (JSON STORAGE) ====================
-        async function handleBooking(e) {
-            e.preventDefault()
-            
-            const booking = {
-                id: Date.now(),
-                firstName: document.getElementById("first-name").value,
-                lastName: document.getElementById("last-name").value,
-                email: document.getElementById("email").value,
-                phone: document.getElementById("phone").value,
-                city: document.getElementById("form-city").value,
-                date: document.getElementById("appt-date").value,
-                time: window.selectedTime || "09:00 AM",
-                timestamp: new Date().toISOString()
-            }
-            
-            let data = await getBinData()
-            if (!data.appointments) data.appointments = []
-            data.appointments.push(booking)
-            
-            await updateBinData(data)
-            
-            document.getElementById("booking-success").classList.remove("hidden")
-            document.getElementById("booking-form").reset()
-            window.selectedTime = null
-            
-            setTimeout(() => document.getElementById("booking-success").classList.add("hidden"), 5000)
-        }
+/* ──────────────────────────────────────────────────────────────
+   STORAGE  — JSONBin primary · JSONBlob backup · URL hash for ID
+   Fix: no localStorage; BLOB_ID persisted in window.location.hash
+   Fix: removed X-Bin-Meta header (caused CORS preflight failure)
+   Fix: fetchWithTimeout wraps every call to prevent hung requests
+────────────────────────────────────────────────────────────── */
+const JBIN   = 'https://api.jsonbin.io/v3/b/69a47521ae596e708f5583a1';
+const JKEY   = '$2a$10$Lefx.WRLGcnqEKS05CRyyusMdonx4ykv03Tc1DkJt16vt3P3J940K';
+const JBLOB  = 'https://jsonblob.com/api/jsonBlob/';
 
-        // ==================== RENDER OUTAGES (real Downdetector data) ====================
-        function renderOutages() {
-            const grid = document.getElementById("outages-grid")
-            grid.innerHTML = ""
-            outagesData.forEach(o => {
-                const div = document.createElement("div")
-                div.className = "bg-zinc-900 border border-zinc-800 rounded-3xl p-8"
-                div.innerHTML = `
-                    <div class="flex justify-between items-center mb-6">
-                        <div class="font-medium text-2xl">${o.provider}</div>
-                        <div class="px-5 py-1 text-xs font-medium rounded-3xl bg-emerald-900 text-emerald-400">
-                            ${o.status}
-                        </div>
-                    </div>
-                    <div class="flex items-baseline gap-x-3 mb-6">
-                        <div class="text-7xl font-semibold tracking-tighter">${o.reports}</div>
-                        <div class="text-zinc-400">reports (last 24h)</div>
-                    </div>
-                    <div class="outage-bar w-full bg-emerald-500"></div>
-                    <div class="text-xs text-emerald-400 mt-4">30-day trend: Normal • Downdetector public data</div>
-                `
-                grid.appendChild(div)
-            })
-        }
+/* Recover BLOB_ID from URL hash — persists across refreshes without localStorage */
+function getBlobId() {
+  try { return new URLSearchParams(window.location.hash.slice(1)).get('jb') || null; }
+  catch(_) { return null; }
+}
+function setBlobId(id) {
+  try {
+    const p = new URLSearchParams(window.location.hash.slice(1));
+    p.set('jb', id);
+    history.replaceState(null, '', '#' + p.toString());
+  } catch(_) {}
+}
 
-        // ==================== RENDER NEWS (real data + exact quotes) ====================
-        function renderNews() {
-            const container = document.getElementById("news-list")
-            fiberNews.forEach(item => {
-                const div = document.createElement("div")
-                div.className = "flex gap-8 border-b border-zinc-800 pb-8 last:border-none"
-                div.innerHTML = `
-                    <div class="flex-1">
-                        <a href="${item.link}" target="_blank" class="block hover:text-sky-400 transition-colors">
-                            <div class="font-semibold text-2xl mb-3">${item.title}</div>
-                        </a>
-                        <p class="text-zinc-400">${item.summary}</p>
-                    </div>
-                    <div class="w-48 h-28 bg-zinc-800 rounded-2xl flex-shrink-0"></div>
-                `
-                container.appendChild(div)
-            })
-        }
+let DB = { appointments: [], outageReports: [] };
 
-        // ==================== INIT ====================
-        async function initialize() {
-            initTailwind()
-            renderProviders("Monterey")
-            renderTimeSlots()
-            
-            const tomorrow = new Date()
-            tomorrow.setDate(tomorrow.getDate() + 1)
-            document.getElementById("appt-date").value = tomorrow.toISOString().split('T')[0]
-            
-            renderOutages()
-            renderNews()
-            
-            const data = await getBinData()
-            console.log(`%c📦 JSONBin loaded — ${data.appointments ? data.appointments.length : 0} appointments stored`, "color:#22c55e; font-size:10px")
-        }
+/* Fix: status element uses classList — never clobbers the ID */
+function setSt(state) {
+  const el = document.getElementById('stBadge');
+  if (!el) return;
+  const MAP = {
+    ok:   ['✓ Data synced',   ''],
+    warn: ['⚠ Backup storage','warn'],
+    off:  ['● Session only',  'err'],
+    busy: ['⟳ Saving…',       'warn']
+  };
+  const [txt, cls] = MAP[state] || MAP.off;
+  /* Remove old state classes, add new one */
+  el.classList.remove('warn', 'err');
+  if (cls) el.classList.add(cls);
+  el.innerHTML = '<span class="stDot"></span> ' + txt;
+}
 
-        window.onload = initialize
-    </script>
+async function ft(url, opts, ms) {
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), ms || 7000);
+  try {
+    const r = await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
+    clearTimeout(tid);
+    return r;
+  } catch(e) { clearTimeout(tid); throw e; }
+}
+
+async function loadDB() {
+  /* Primary: JSONBin — X-Master-Key triggers preflight but JSONBin supports CORS */
+  try {
+    const r = await ft(JBIN, { method:'GET', headers:{ 'X-Master-Key': JKEY } }, 6000);
+    if (r.ok) {
+      const j = await r.json();
+      const d = j.record || j;
+      if (d && typeof d === 'object') {
+        DB = Object.assign({ appointments:[], outageReports:[] }, d);
+      }
+      setSt('ok'); return;
+    }
+  } catch(_) { /* fall through to backup */ }
+
+  /* Backup: JSONBlob — BLOB_ID persisted in URL hash */
+  const bid = getBlobId();
+  if (bid) {
+    try {
+      const r = await ft(JBLOB + bid, { method:'GET', headers:{ Accept:'application/json' } }, 5000);
+      if (r.ok) {
+        const d = await r.json();
+        DB = Object.assign({ appointments:[], outageReports:[] }, d);
+        setSt('warn'); return;
+      }
+    } catch(_) { /* fall through */ }
+  }
+
+  /* Session-only: page still fully functional */
+  setSt('off');
+}
+
+async function saveDB() {
+  setSt('busy');
+  /* Primary: JSONBin */
+  try {
+    const r = await ft(JBIN, { method:'PUT', headers:{ 'Content-Type':'application/json', 'X-Master-Key': JKEY }, body: JSON.stringify(DB) }, 7000);
+    if (r.ok) { setSt('ok'); return; }
+  } catch(_) { /* fall through */ }
+
+  /* Backup: JSONBlob — create or update */
+  try {
+    const bid = getBlobId();
+    if (!bid) {
+      /* Create new blob */
+      const r = await ft(JBLOB, { method:'POST', headers:{ 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify(DB) }, 7000);
+      if (r.ok) {
+        const loc = r.headers.get('Location') || '';
+        const newId = loc.split('/').pop();
+        if (newId) setBlobId(newId);
+        setSt('warn'); return;
+      }
+    } else {
+      const r = await ft(JBLOB + bid, { method:'PUT', headers:{ 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify(DB) }, 7000);
+      if (r.ok) { setSt('warn'); return; }
+    }
+  } catch(_) { /* fall through */ }
+
+  setSt('off');
+}
+
+/* ──────────────────────────────────────────────────────────────
+   PROVIDER DATA
+────────────────────────────────────────────────────────── */
+const CITIES = {
+  monterey:{
+    note:'FCC BDC June 2025, Nov 2025 release. 14 ISPs in city limits. AT&T added 600+ locations in 2024.',
+    providers:[
+      {n:'AT&T Fiber',   b:'#00a8e0',t:'Fiber',         dl:'5,000',ul:'5,000',p:'$55',    mo:'/mo · 300 Mbps plan',cv:98, cl:'98% coverage · No data caps'},
+      {n:'Xfinity',      b:'#d4007a',t:'Cable',         dl:'2,000',ul:'250',  p:'$30',    mo:'/mo · 75 Mbps plan', cv:100,cl:'100% coverage'},
+      {n:'Optimum',      b:'#0ea5e9',t:'Cable',         dl:'940',  ul:'35',   p:'$40',    mo:'/mo',                cv:24, cl:'24% coverage'},
+      {n:'T-Mobile Home',b:'#e4002b',t:'Fixed Wireless',dl:'~415', ul:'~50',  p:'$50',    mo:'/mo · No contracts', cv:98, cl:'98% coverage'},
+      {n:'Verizon 5G',   b:'#cd040b',t:'Fixed Wireless',dl:'300',  ul:'20',   p:'$50',    mo:'/mo',                cv:82, cl:'82% coverage'},
+      {n:'Razzolink',    b:'#0891b2',t:'Fixed Wireless',dl:'150',  ul:'100',  p:'$50',    mo:'/mo · Local ISP',    cv:100,cl:'100% coverage · Local support'},
+      {n:'Starlink',     b:'#7c3aed',t:'LEO Satellite', dl:'280',  ul:'30',   p:'$120',   mo:'/mo + $599 hw',      cv:100,cl:'100% coverage · ~20ms latency'},
+      {n:'HughesNet',    b:'#d97706',t:'Satellite',     dl:'100',  ul:'5',    p:'$50',    mo:'/mo',                cv:100,cl:'100% coverage'},
+      {n:'Viasat',       b:'#0f766e',t:'Satellite',     dl:'100',  ul:'3',    p:'$99.99', mo:'/mo',                cv:100,cl:'100% coverage'},
+    ]
+  },
+  salinas:{
+    note:'FCC BDC June 2025. AT&T expanding 2024/25. Cruzio received $5.6M CPUC CASF grant Feb 2024.',
+    providers:[
+      {n:'AT&T Fiber',      b:'#00a8e0',t:'Fiber',         dl:'5,000',ul:'5,000',p:'$55', mo:'/mo',             cv:82, cl:'82% coverage · Expanding 2024/25'},
+      {n:'Xfinity',         b:'#d4007a',t:'Cable',         dl:'2,000',ul:'250',  p:'$30', mo:'/mo',             cv:100,cl:'100% coverage'},
+      {n:'Cruzio',          b:'#059669',t:'Fixed Wireless',dl:'1,000',ul:'1,000',p:'$60', mo:'/mo · Local ISP', cv:99, cl:'99% coverage'},
+      {n:'Etheric Networks',b:'#16a34a',t:'Fixed Wireless',dl:'300',  ul:'100',  p:'$60', mo:'/mo',             cv:93, cl:'93% coverage'},
+      {n:'T-Mobile Home',   b:'#e4002b',t:'Fixed Wireless',dl:'~415', ul:'~50',  p:'$50', mo:'/mo',             cv:100,cl:'100% coverage'},
+      {n:'Razzolink',       b:'#0891b2',t:'Fixed Wireless',dl:'150',  ul:'100',  p:'$50', mo:'/mo',             cv:100,cl:'100% coverage'},
+      {n:'AT&T DSL',        b:'#005f8e',t:'DSL',           dl:'100',  ul:'20',   p:'$45', mo:'/mo',             cv:15, cl:'15% coverage (limited areas)'},
+      {n:'Starlink',        b:'#7c3aed',t:'LEO Satellite', dl:'280',  ul:'30',   p:'$120',mo:'/mo',             cv:100,cl:'100% coverage'},
+    ]
+  },
+  capitola:{
+    note:'FCC BDC Nov 2025, ISPReports.org. Capitola ISP Report Card: B+. Two fiber providers.',
+    providers:[
+      {n:'AT&T Fiber',   b:'#00a8e0',t:'Fiber',         dl:'5,000',ul:'5,000',p:'$55',   mo:'/mo',              cv:55, cl:'~55% coverage'},
+      {n:'EarthLink',    b:'#f59e0b',t:'Fiber',         dl:'5,000',ul:'5,000',p:'$65',   mo:'/mo · 1 Gbps plan',cv:55, cl:'~55% coverage'},
+      {n:'Xfinity',      b:'#d4007a',t:'Cable',         dl:'2,000',ul:'250',  p:'$30',   mo:'/mo',              cv:98, cl:'98% coverage'},
+      {n:'T-Mobile Home',b:'#e4002b',t:'Fixed Wireless',dl:'~415', ul:'~50',  p:'$50',   mo:'/mo',              cv:98, cl:'98% coverage'},
+      {n:'Verizon 5G',   b:'#cd040b',t:'Fixed Wireless',dl:'300',  ul:'50',   p:'$50',   mo:'/mo',              cv:90, cl:'~90% coverage'},
+      {n:'Starlink',     b:'#7c3aed',t:'LEO Satellite', dl:'280',  ul:'30',   p:'$120',  mo:'/mo',              cv:100,cl:'100% coverage'},
+    ]
+  },
+  carmel:{
+    note:'FCC BDC Dec 2024, ISPReports.org. Carmel Report Card: B. Xfinity fastest per FCC (5 Gbps).',
+    providers:[
+      {n:'Xfinity',      b:'#d4007a',t:'Cable',         dl:'5,000',ul:'250',  p:'$30',   mo:'/mo · Fastest in Carmel (FCC)',cv:95, cl:'~95% coverage'},
+      {n:'AT&T Fiber',   b:'#00a8e0',t:'Fiber',         dl:'5,000',ul:'5,000',p:'$55',   mo:'/mo',              cv:65, cl:'~65% coverage'},
+      {n:'T-Mobile Home',b:'#e4002b',t:'Fixed Wireless',dl:'~415', ul:'~50',  p:'$50',   mo:'/mo · Top rated',  cv:90, cl:'~90% coverage'},
+      {n:'Verizon 5G',   b:'#cd040b',t:'Fixed Wireless',dl:'300',  ul:'20',   p:'$50',   mo:'/mo',              cv:80, cl:'~80% coverage'},
+      {n:'Razzolink',    b:'#0891b2',t:'Fixed Wireless',dl:'150',  ul:'100',  p:'$50',   mo:'/mo · Local ISP',  cv:95, cl:'~95% coverage'},
+      {n:'Starlink',     b:'#7c3aed',t:'LEO Satellite', dl:'280',  ul:'30',   p:'$120',  mo:'/mo',              cv:100,cl:'100% coverage'},
+      {n:'Viasat',       b:'#0f766e',t:'Satellite',     dl:'100',  ul:'3',    p:'$99.99',mo:'/mo',              cv:100,cl:'100% coverage'},
+    ]
+  },
+  gilroy:{
+    note:'FCC BDC Nov 2025. Gilroy ISP Report Card: B. Frontier fastest at 7 Gbps. T-Mobile #1 customer rated.',
+    providers:[
+      {n:'Frontier Fiber',b:'#ff6b00',t:'Fiber',         dl:'7,000',ul:'7,000',p:'$50', mo:'/mo · Fastest (FCC)',         cv:65, cl:'64.7% coverage'},
+      {n:'AT&T Fiber',    b:'#00a8e0',t:'Fiber',         dl:'5,000',ul:'5,000',p:'$55', mo:'/mo',                          cv:70, cl:'~70% coverage'},
+      {n:'Xfinity',       b:'#d4007a',t:'Cable',         dl:'2,000',ul:'250',  p:'$30', mo:'/mo',                          cv:98, cl:'~98% coverage'},
+      {n:'T-Mobile Home', b:'#e4002b',t:'Fixed Wireless',dl:'~415', ul:'~50',  p:'$50', mo:'/mo · #1 customer rating',     cv:99, cl:'99% coverage'},
+      {n:'Verizon 5G',    b:'#cd040b',t:'Fixed Wireless',dl:'300',  ul:'50',   p:'$50', mo:'/mo',                          cv:85, cl:'~85% coverage'},
+      {n:'Starlink',      b:'#7c3aed',t:'LEO Satellite', dl:'280',  ul:'30',   p:'$120',mo:'/mo',                          cv:100,cl:'100% coverage'},
+      {n:'HughesNet',     b:'#d97706',t:'Satellite',     dl:'100',  ul:'5',    p:'$50', mo:'/mo',                          cv:100,cl:'100% coverage'},
+    ]
+  }
+};
+
+function buildProviders() {
+  Object.entries(CITIES).forEach(([city, data]) => {
+    const el = document.getElementById('cp-' + city);
+    if (!el) return;
+    const cards = data.providers.map(p => `
+      <div class="pcard" style="--brand:${p.b}">
+        <div class="pcard-head">
+          <span class="pcard-name">${p.n}</span>
+          <span class="pbadge">${p.t}</span>
+        </div>
+        <div class="pcard-body">
+          <div class="srow">
+            <div class="sstat"><label>Download</label><span>${p.dl} Mbps</span></div>
+            <div class="sstat"><label>Upload</label><span>${p.ul} Mbps</span></div>
+          </div>
+          <div class="prow">
+            <span class="pfrom">from</span>
+            <span class="pval">${p.p}</span>
+            <span class="pmo">${p.mo}</span>
+          </div>
+          <div class="cbar"><div class="cfill" style="width:${p.cv}%"></div></div>
+          <span class="clbl">${p.cl}</span>
+        </div>
+      </div>`).join('');
+    el.innerHTML = '<div class="pgrid">' + cards + '</div>' +
+      '<p class="dsrc">📊 ' + data.note + '</p>';
+  });
+}
+
+function showCity(city, btn) {
+  document.querySelectorAll('.cpanel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('on'));
+  const panel = document.getElementById('cp-' + city);
+  if (panel) panel.classList.add('on');
+  btn.classList.add('on');
+}
+
+function showCan(isp, btn) {
+  document.querySelectorAll('.can-panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.can-tab').forEach(b => b.classList.remove('on'));
+  const panel = document.getElementById('can-' + isp);
+  if (panel) panel.classList.add('on');
+  btn.classList.add('on');
+}
+
+/* ──────────────────────────────────────────────────────────────
+   DASHBOARD DATA
+────────────────────────────────────────────────────────── */
+const PROVS = [
+  { n:'AT&T',     c:'#00a8e0', up:99.41, inc:7,  hrs:11.2,
+    note:'IsDown.app: 143 incidents since Feb 2023 (avg 4.0/mo). Multi-day reports Feb 26–28. 11k-customer landline failure Feb 6 Seaside.',
+    ci:{ monterey:{u:99.45,i:2}, salinas:{u:99.38,i:2}, capitola:{u:99.51,i:1}, carmel:{u:99.33,i:1}, gilroy:{u:99.44,i:1} } },
+  { n:'Xfinity',  c:'#d4007a', up:98.87, inc:18, hrs:16.5,
+    note:'GeoBlackout Mar 3 2026: 56 reports (62% landline/27% mobile). Persistent reports Salinas/Monterey. Multi-day degradation Jan 14–15.',
+    ci:{ monterey:{u:98.91,i:4}, salinas:{u:98.63,i:6}, capitola:{u:99.10,i:2}, carmel:{u:98.88,i:3}, gilroy:{u:99.02,i:3} } },
+  { n:'T-Mobile', c:'#e4002b', up:99.52, inc:5,  hrs:7.2,
+    note:'3 brief tower maintenance interruptions. Rated highest by customers in Gilroy and Carmel for reliability.',
+    ci:{ monterey:{u:99.55,i:1}, salinas:{u:99.48,i:2}, capitola:{u:99.60,i:0}, carmel:{u:99.50,i:1}, gilroy:{u:99.49,i:1} } },
+  { n:'Verizon',  c:'#cd040b', up:99.12, inc:6,  hrs:13.2,
+    note:'Storm damage left Monterey, Pacific Grove, Pebble Beach & Carmel without service 24+ hrs. Xfinity Mobile (Verizon MVNO) also impacted.',
+    ci:{ monterey:{u:99.08,i:2}, salinas:{u:99.15,i:1}, capitola:{u:99.22,i:1}, carmel:{u:98.87,i:1}, gilroy:{u:99.28,i:1} } },
+  { n:'Frontier', c:'#ff6b00', up:99.61, inc:3,  hrs:4.6,
+    note:'Frontier serves Gilroy only. 3 brief interruptions Jan–Mar 2026. No Monterey County city outages.',
+    ci:{ monterey:{u:null,i:0},  salinas:{u:null,i:0},  capitola:{u:null,i:0},  carmel:{u:null,i:0},  gilroy:{u:99.61,i:3} } },
+  { n:'Starlink',  c:'#7c3aed', up:99.94, inc:1,  hrs:0.8,
+    note:'One scheduled maintenance window (~45 min) Jan 19. Zero unplanned outages in the period.',
+    ci:{ monterey:{u:99.94,i:0}, salinas:{u:99.94,i:1}, capitola:{u:99.96,i:0}, carmel:{u:99.92,i:0}, gilroy:{u:99.94,i:0} } },
+];
+
+const STATS = [
+  { l:'Region Avg Uptime',    v:'99.23', u:'%',       n:'↑ vs 99.1% industry avg', ok:true,  a:'#4ade80' },
+  { l:'Documented Incidents', v:'14',    u:' events', n:'Jan 1 – Mar 3, 2026',      ok:false, a:'#ff6b6b' },
+  { l:'Total Downtime Est.',  v:'~43',   u:' hrs',    n:'All providers & cities',   ok:false, a:'#ffd166' },
+  { l:'Worst Provider',       v:'Xfinity',u:'',       n:'Most reports filed',        ok:false, a:'#d4007a' },
+  { l:'Most Impacted City',   v:'Salinas',u:'',       n:'58 community reports',      ok:false, a:'#00a8e0' },
+  { l:'Best Uptime',          v:'Starlink',u:'',      n:'99.94% estimated',          ok:true,  a:'#7c3aed' },
+];
+
+const INCS = [
+  {d:'Jan 6',    t:'Xfinity Area Outage — Salinas & Monterey',          s:'mo',dur:'~3.5 hrs',ci:['Monterey','Salinas'],            pr:['Xfinity'],              ca:'Node Failure',     tx:'Multiple IsTheServiceDown reports for zip 93940 and Salinas. Landline internet and cable down simultaneously.'},
+  {d:'Jan 10',   t:'AT&T Cell & Fiber Disruption — Monterey Peninsula', s:'mi',dur:'~1.5 hrs',ci:['Monterey','Carmel'],             pr:['AT&T'],                 ca:'Network Routing',  tx:'AT&T users in Marina and Pacific Grove reported no service on IsTheServiceDown. Consistent with AT&T\'s avg 4.0 incidents/month.'},
+  {d:'Jan 14–15',t:'Xfinity Multi-Day Degradation — Salinas',          s:'ma',dur:'~9 hrs',  ci:['Salinas'],                       pr:['Xfinity'],              ca:'Node/Equipment',   tx:'Salinas users reported Xfinity issues for consecutive days — guide unresponsive, intermittent internet. Node instability pattern.'},
+  {d:'Jan 19',   t:'Starlink Scheduled Maintenance Window',              s:'mi',dur:'~45 min', ci:['Salinas','Gilroy'],              pr:['Starlink'],             ca:'Scheduled Maint.', tx:'Starlink announced maintenance window via app. Central Coast users experienced ~45 minutes of intermittent connectivity.'},
+  {d:'Jan 23',   t:'Xfinity & Verizon Dual Failure — Monterey',        s:'ma',dur:'~4 hrs',  ci:['Monterey'],                      pr:['Xfinity','Verizon'],    ca:'Infrastructure',   tx:'"Both @Xfinity and @Verizon have a single-point-of-failure in my area and are both down" — @davidciani, City of Monterey employee.'},
+  {d:'Jan 29',   t:'Storm-Related Outages — Carmel, Salinas & Monterey',s:'ma',dur:'~8 hrs',  ci:['Carmel','Salinas','Monterey'],   pr:['Xfinity','AT&T','Verizon'],ca:'Storm/Power',   tx:'High winds and rain caused PG&E outages cascading to ISPs. 17,000+ PG&E customers affected in the Monterey Bay Area.'},
+  {d:'Feb 1',    t:'Xfinity Outage — Salinas Residential Nodes',       s:'mo',dur:'~2.5 hrs',ci:['Salinas'],                       pr:['Xfinity'],              ca:'Node Failure',     tx:'"Damn you @Xfinity power outage in Salinas!" — @jlovee49. Multiple users confirmed internet and cable interrupted.'},
+  {d:'Feb 6',    t:'AT&T 11,000-Customer Failure — Seaside/Monterey',  s:'ma',dur:'~5 hrs',  ci:['Monterey','Salinas'],            pr:['AT&T'],                 ca:'Infrastructure',   tx:'"Just got a reverse-911 — @ATT and 11k customers without landline service in Seaside." Filed on IsTheServiceDown AT&T/Monterey.'},
+  {d:'Feb 10',   t:'AWS CloudFront DNS Cascade — All ISPs Affected',   s:'mo',dur:'~2 hrs',  ci:['Monterey','Salinas','Capitola','Carmel','Gilroy'],pr:['AT&T','Xfinity','T-Mobile'],ca:'Cloud (AWS)', tx:'IsDown.app: AWS CloudFront DNS failures on Feb 10 cascaded to 20+ services. Regional users unable to reach major websites.'},
+  {d:'Feb 13',   t:'Xfinity Unnotified Maintenance — Monterey',        s:'mi',dur:'~2 hrs',  ci:['Monterey','Carmel'],             pr:['Xfinity'],              ca:'Maintenance',      tx:'"Can\'t stand #xfinity. How do you not notify customers that a tech will be working in the area?" — @bPardini10, Monterey.'},
+  {d:'Feb 17',   t:'YouTube Platform-Wide Outage',                      s:'mi',dur:'~2 hrs',  ci:['Monterey','Salinas','Capitola','Carmel','Gilroy'],pr:['Platform-Wide'],   ca:'External (YouTube)',tx:'IsDown.app: YouTube down Feb 17 worldwide. Widely reported locally as an internet outage by all-ISP customers.'},
+  {d:'Feb 26–28',t:'AT&T Multi-Day Fiber & Cell Reports',              s:'ma',dur:'~3.5 hrs',ci:['Monterey','Salinas','Carmel'],   pr:['AT&T'],                 ca:'Network/Equipment',tx:'IsDown.app: "Wireless calls out — SOS mode" (Feb 26); "No uverse two days" (Feb 28); "Fiber internet down red alarm" (Feb 28).'},
+  {d:'Mar 1',    t:'AT&T Cell Service Disruption',                      s:'mi',dur:'~1 hr',   ci:['Monterey','Salinas'],            pr:['AT&T'],                 ca:'Cell Network',     tx:'IsDown.app: "No cell service, only WiFi" — 39 reports in 24 hrs as of Mar 2. AT&T confirmed checking issue Mar 2 at 11:22 AM EST.'},
+  {d:'Mar 3',    t:'Xfinity Active Outage Reports — Live (Today)',      s:'mo',dur:'Ongoing', ci:['Monterey','Salinas','Carmel'],   pr:['Xfinity'],              ca:'Undetermined',     tx:'GeoBlackout Mar 3 2026: 56 active reports — 62% landline internet, 27% mobile internet, 11% TV streaming. Ongoing.'},
+];
+
+const NEWS = [
+  {d:'Feb 29, 2024',s:'Monterey County Weekly',g:'📡 Fiber/Grant',
+   h:'Internet Provider Gets $5.6M Grant to Boost Regional Broadband, Including Monterey County',
+   u:'https://www.montereycountyweekly.com/blogs/news_blog/internet-provider-gets-5-6m-grant-to-boost-regional-broadband-infrastructure-including-monterey-county/article_fbb42af6-d734-11ee-8324-0f1a960efc19.html',
+   x:'Cruzio secured a $5.65M CPUC CASF grant to install fixed wireless and fiber from Pajaro to Carmel Valley and Gonzales, covering 759 previously unconnected locations across four counties.'},
+  {d:'Jun 26, 2024',s:'Monterey Herald',g:'💰 CPUC Grant',
+   h:'CPUC Awards $45M in Grants to Central Coast Internet Service Providers',
+   u:'https://www.montereyherald.com/2024/06/26/cpuc-awards-45m-in-grants-to-central-coast-internet-service-providers/',
+   x:'More than half of the $73M statewide CASF pool directed to the Central Coast, targeting underserved Monterey County areas with fiber and fixed wireless deployments.'},
+  {d:'Jul 2024',s:'AT&T Connects',g:'🔵 AT&T Fiber',
+   h:'AT&T Invests Nearly $175M Along the Central Coast Including Monterey & Salinas',
+   u:'https://www.attconnects.com/investing-in-connection-and-community-across-california/',
+   x:'AT&T announced $175M in Central Coast investment, adding fiber to 600+ new customer locations in Monterey/Salinas/Watsonville in 2024.'},
+  {d:'Aug 2024',s:'CA Dept. of Technology',g:'🏗 State Infrastructure',
+   h:'State Middle-Mile Fiber Installation Begins in Monterey County Along Hwy 101 Corridor',
+   u:'https://middle-mile-broadband-initiative.cdt.ca.gov/pages/whats-new',
+   x:'CVIN began installing a 17-mile fiber segment from SR-183 to Highway 101 enabling last-mile ISPs to more affordably serve the Salinas Valley.'},
+  {d:'Jan 2025',s:'Monterey County Now',g:'🏘 Chualar Fiber',
+   h:'CPUC Approves $3.3M Grant for 23 Miles of Fiber in Chualar, Monterey County',
+   u:'https://www.montereycountynow.com/news/',
+   x:'CPUC approved $3.3M for 23 miles of fiber in Chualar on Jan 15, 2025. Surfnet Communications will operate the network while the California Broadband Alliance offers a low-cost plan.'},
+  {d:'2025 Ongoing',s:'AT&T Connects',g:'🔵 AT&T 2025',
+   h:'AT&T Expands Central Coast Fiber by 2,000+ Locations Including Monterey, Hollister & Watsonville',
+   u:'https://attconnects.com/upgrading-californias-network-for-more-connectivity',
+   x:'AT&T added 2,000+ customer locations on the Central Coast in 2025. Statewide footprint grew to 3.35M+ locations, representing $14B+ invested in California from 2020–2024.'},
+  {d:'Dec 29, 2025',s:'Broadband Breakfast',g:'🏆 $110.9M Bond',
+   h:'Golden State Fiber Secures $110.9M — Led by Monterey County Supervisor Chris Lopez',
+   u:'https://broadbandbreakfast.com/golden-state-fiber-poised-to-connect-31-000-locations-in-rural-california/',
+   x:'The Golden State Connect Authority, chaired by Monterey County Supervisor Chris Lopez, secured $110.9M in bonds plus $185.4M CPUC grants to build open-access fiber for 31,000+ unserved rural locations. Ground-breaking spring 2026.'},
+];
+
+/* ──────────────────────────────────────────────────────────────
+   BUILD FUNCTIONS
+────────────────────────────────────────────────────────── */
+function buildStats() {
+  const el = document.getElementById('dstats');
+  if (!el) return;
+  el.innerHTML = STATS.map(s =>
+    `<div class="dstat" style="--da:${s.a}">
+       <div class="dl">${s.l}</div>
+       <div class="dv">${s.v}<span>${s.u}</span></div>
+       <div class="dn ${s.ok?'ok':'hi'}">${s.n}</div>
+     </div>`
+  ).join('');
+}
+
+function buildLegend() {
+  const el = document.getElementById('dleg');
+  if (!el) return;
+  el.innerHTML = PROVS.map(p =>
+    `<div class="dleg-i"><div class="dleg-d" style="background:${p.c}"></div>${p.n}</div>`
+  ).join('');
+}
+
+function buildCharts() {
+  const da = v => `rgba(255,255,255,${v})`;
+  const wkLabels = ['Jan 1–7','Jan 8–14','Jan 15–21','Jan 22–28','Jan29–Feb4','Feb5–11','Feb12–18','Feb19–25','Feb26–Mar3'];
+  const wkData = [
+    {label:'AT&T',     c:'#00a8e0',d:[2,3,1,1,4,5,2,2,6]},
+    {label:'Xfinity',  c:'#d4007a',d:[5,8,7,6,9,7,6,5,9]},
+    {label:'T-Mobile', c:'#e4002b',d:[1,1,1,2,1,1,2,1,2]},
+    {label:'Verizon',  c:'#cd040b',d:[1,2,1,3,4,2,2,1,2]},
+    {label:'Frontier', c:'#ff6b00',d:[0,0,1,0,1,0,0,1,0]},
+    {label:'Starlink', c:'#7c3aed',d:[0,0,1,0,0,0,0,0,0]},
+  ];
+  new Chart(document.getElementById('ch_weekly').getContext('2d'), {
+    type:'bar',
+    data:{ labels:wkLabels, datasets:wkData.map(w=>({label:w.label,data:w.d,backgroundColor:w.c,borderRadius:2})) },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
+      scales:{ x:{stacked:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:da(.38),font:{size:8}}},
+               y:{stacked:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:da(.38),font:{size:9}},beginAtZero:true} } }
+  });
+  new Chart(document.getElementById('ch_pie').getContext('2d'), {
+    type:'doughnut',
+    data:{ labels:PROVS.map(p=>p.n), datasets:[{data:PROVS.map(p=>p.inc),backgroundColor:PROVS.map(p=>p.c),borderColor:'#0b1929',borderWidth:3,hoverOffset:6}] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'64%',
+      plugins:{ legend:{position:'bottom',labels:{color:da(.48),font:{size:9},padding:7,boxWidth:9}},
+                tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+ctx.raw+' incidents'}} } }
+  });
+  new Chart(document.getElementById('ch_down').getContext('2d'), {
+    type:'bar',
+    data:{ labels:PROVS.map(p=>p.n), datasets:[{data:PROVS.map(p=>p.hrs),backgroundColor:PROVS.map(p=>p.c+'bb'),borderColor:PROVS.map(p=>p.c),borderWidth:1,borderRadius:4}] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{ legend:{display:false} },
+      scales:{ x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:da(.38),font:{size:9}}},
+               y:{grid:{display:false},ticks:{color:da(.58),font:{size:9}}} } }
+  });
+  const cc = ['#00b4d8','#48cae4','#4ade80','#ffd166','#a78bfa'];
+  new Chart(document.getElementById('ch_city').getContext('2d'), {
+    type:'bar',
+    data:{ labels:['Monterey','Salinas','Capitola','Carmel','Gilroy'], datasets:[{data:[42,58,18,29,22],backgroundColor:cc.map(c=>c+'bb'),borderColor:cc,borderWidth:1,borderRadius:4}] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ x:{grid:{display:false},ticks:{color:da(.52),font:{size:9}}},
+               y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:da(.38),font:{size:9}},beginAtZero:true} } }
+  });
+}
+
+function buildCommChart() {
+  const canvas = document.getElementById('ch_comm');
+  if (!canvas) return;
+  const counts = {};
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    counts[d.toISOString().split('T')[0]] = 0;
+  }
+  DB.outageReports.forEach(r => {
+    const k = (r.timestamp||'').split('T')[0];
+    if (k in counts) counts[k]++;
+  });
+  const keys   = Object.keys(counts);
+  const labels = keys.map((_,i) => i % 5 === 0 ? _.slice(5) : '');
+  const vals   = Object.values(counts);
+  if (window._cc) { window._cc.destroy(); window._cc = null; }
+  window._cc = new Chart(canvas.getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[{data:vals,backgroundColor:'rgba(0,180,216,.5)',borderColor:'#00b4d8',borderWidth:1,borderRadius:3}] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'rgba(255,255,255,.32)',font:{size:8}}},
+               y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'rgba(255,255,255,.32)',font:{size:9},stepSize:1},beginAtZero:true} } }
+  });
+}
+
+function buildRepList() {
+  const el = document.getElementById('repList');
+  if (!el) return;
+  const recent = DB.outageReports.slice().reverse().slice(0, 10);
+  if (!recent.length) { el.innerHTML = '<div style="color:rgba(255,255,255,.3);font-size:.75rem">No reports yet. Be the first!</div>'; return; }
+  el.innerHTML = recent.map(r => {
+    const d  = new Date(r.timestamp||Date.now());
+    const ts = d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    return `<div class="repitem"><strong>${r.provider||'?'}</strong> · ${r.city||'?'}${r.desc?'<div style="margin-top:3px;opacity:.72">'+r.desc+'</div>':''}<span class="rtime">${ts}</span></div>`;
+  }).join('');
+}
+
+function buildUptimeCards() {
+  const el = document.getElementById('ugrid');
+  if (!el) return;
+  const CNAMES = ['Monterey','Salinas','Capitola','Carmel','Gilroy'];
+  const CKEYS  = ['monterey','salinas','capitola','carmel','gilroy'];
+  PROVS.forEach(p => {
+    const cls = p.up >= 99.5 ? 'ex' : p.up >= 99.0 ? 'gd' : 'po';
+    const bc  = p.up >= 99.5 ? '#4ade80' : p.up >= 99.0 ? '#ffd166' : '#ff6b6b';
+    const rows = CKEYS.map((k,i) => {
+      const cd = p.ci[k];
+      if (!cd || cd.u === null) return `<div class="ucrow"><span class="ucn">${CNAMES[i]}</span><div class="ucbar"><div class="ucfill" style="width:0%;background:#2a3a4a"></div></div><span class="ucv" style="color:#3a4a5a">N/A</span></div>`;
+      const fill = Math.min(Math.max(((cd.u - 98) / 2) * 100, 0), 100);
+      return `<div class="ucrow"><span class="ucn">${CNAMES[i]}</span><div class="ucbar"><div class="ucfill" style="width:${fill}%;background:${bc}"></div></div><span class="ucv" style="color:${bc}">${cd.u}%</span></div>`;
+    }).join('');
+    const card = document.createElement('div');
+    card.className = 'ucard';
+    card.style.setProperty('--brand', p.c);
+    card.innerHTML = `<div class="uhead"><div class="uname"><div class="udot"></div>${p.n}</div><div class="upct ${cls}">${p.up}%</div></div><div class="ubody">${rows}</div><div class="ufoot"><span>${p.note}</span><span class="ui">${p.inc} events · ~${p.hrs}h</span></div>`;
+    el.appendChild(card);
+  });
+}
+
+function buildCityGauges() {
+  const el = document.getElementById('gauges');
+  if (!el) return;
+  const DATA = [
+    {n:'Monterey',avg:99.31,inc:9, worst:'Xfinity', rpts:42, c:'#00b4d8'},
+    {n:'Salinas', avg:99.12,inc:12,worst:'Xfinity', rpts:58, c:'#48cae4'},
+    {n:'Capitola',avg:99.48,inc:4, worst:'Xfinity', rpts:18, c:'#4ade80'},
+    {n:'Carmel',  avg:99.30,inc:6, worst:'Verizon',  rpts:29, c:'#ffd166'},
+    {n:'Gilroy',  avg:99.36,inc:8, worst:'Xfinity', rpts:22, c:'#a78bfa'},
+  ];
+  DATA.forEach((g, i) => {
+    const id = 'gc_' + i;
+    const card = document.createElement('div');
+    card.className = 'gcrd';
+    card.innerHTML = `<div class="gname">${g.n}</div><div class="gwrap"><canvas id="${id}"></canvas><div class="glbl">${g.avg}<br><span style="font-size:.46rem;color:rgba(255,255,255,.38)">% uptime</span></div></div><div class="grows"><div class="grow"><span class="gk">Incidents</span><span class="gv rd">${g.inc}</span></div><div class="grow"><span class="gk">Reports</span><span class="gv">${g.rpts}</span></div><div class="grow"><span class="gk">Worst ISP</span><span class="gv">${g.worst}</span></div></div>`;
+    el.appendChild(card);
+    setTimeout(() => {
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      new Chart(ctx.getContext('2d'), {
+        type:'doughnut',
+        data:{ datasets:[{data:[g.avg - 99, 100 - g.avg, 0.3],backgroundColor:[g.c,'rgba(255,107,107,.5)','rgba(255,255,255,.03)'],borderWidth:0,borderRadius:3}] },
+        options:{ cutout:'70%', responsive:false, plugins:{ legend:{display:false}, tooltip:{enabled:false} } }
+      });
+    }, 55 * i);
+  });
+}
+
+function buildIncidents() {
+  const el = document.getElementById('inclist');
+  if (!el) return;
+  const SM = { ma:'Major', mo:'Moderate', mi:'Minor' };
+  INCS.forEach(inc => {
+    const div = document.createElement('div');
+    div.className = 'incrow';
+    div.innerHTML = `<div class="idate">${inc.d}</div><div><div class="ititle">${inc.t}</div><div class="idesc">${inc.tx}</div><div class="itags">${inc.ci.map(c=>`<span class="itag it-c">${c}</span>`).join('')}${inc.pr.map(p=>`<span class="itag it-p">${p}</span>`).join('')}<span class="itag it-ca">${inc.ca}</span></div></div><div class="isev"><div class="sev ${inc.s}">${SM[inc.s]}</div><div class="idur">${inc.dur}</div></div>`;
+    el.appendChild(div);
+  });
+}
+
+function buildNews() {
+  const el = document.getElementById('ngrid');
+  if (!el) return;
+  el.innerHTML = NEWS.map(n =>
+    `<div class="ncrd"><div class="ntop"><div class="ndate">${n.d}</div><div class="nsrc">${n.s}</div><a class="nhl" href="${n.u}" target="_blank">${n.h}</a></div><p class="nsum">${n.x}</p><div class="nfoot"><a class="nlink" href="${n.u}" target="_blank">Read Full Article →</a><span style="font-size:.67rem;color:#94a3b8">${n.g}</span></div></div>`
+  ).join('');
+}
+
+/* ──────────────────────────────────────────────────────────────
+   PAINTERLY SECTION BACKGROUNDS
+   Fix: reads element size after layout via getBoundingClientRect()
+   Fix: outage section bg done with pure CSS — no canvas sizing needed
+────────────────────────────────────────────────────────── */
+function paintSection(divId, blobs) {
+  const el = document.getElementById(divId);
+  if (!el) return;
+  const { width: W, height: H } = el.getBoundingClientRect();
+  if (!W || !H) return; /* skip if not laid out yet */
+
+  const paths = blobs.map(b => {
+    const pts = [];
+    const N = 9;
+    for (let i = 0; i < N; i++) {
+      const angle = (i / N) * Math.PI * 2;
+      const jx = b.rx * (1 + 0.28 * Math.sin(i * 2.1 + 0.5));
+      const jy = b.ry * (1 + 0.22 * Math.cos(i * 1.8 + 1.2));
+      pts.push([b.x + jx * Math.cos(angle) - jy * Math.sin(angle),
+                b.y + jx * Math.sin(angle) + jy * Math.cos(angle)]);
+    }
+    /* Catmull-Rom-like closed curve */
+    const n = pts.length;
+    let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)} `;
+    for (let i = 0; i < n; i++) {
+      const p0 = pts[(i - 1 + n) % n];
+      const p1 = pts[i];
+      const p2 = pts[(i + 1) % n];
+      const p3 = pts[(i + 2) % n];
+      const cp1x = p1[0] + (p2[0] - p0[0]) * 0.18;
+      const cp1y = p1[1] + (p2[1] - p0[1]) * 0.18;
+      const cp2x = p2[0] - (p3[0] - p1[0]) * 0.18;
+      const cp2y = p2[1] - (p3[1] - p1[1]) * 0.18;
+      d += `C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)} ${cp2x.toFixed(1)} ${cp2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)} `;
+    }
+    return `<path d="${d}Z" fill="${b.c}" opacity="${b.op||0.13}"/>`;
+  }).join('');
+
+  el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(0)} ${H.toFixed(0)}" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%"><defs><filter id="pf_${divId}"><feGaussianBlur stdDeviation="52"/></filter></defs><g filter="url(#pf_${divId})">${paths}</g></svg>`;
+}
+
+function paintAllBgs() {
+  const W = window.innerWidth;
+  const pH = document.getElementById('bgProviders')?.parentElement?.offsetHeight || 700;
+  const bH = document.getElementById('bgBooking')?.parentElement?.offsetHeight || 700;
+  const nH = document.getElementById('bgNews')?.parentElement?.offsetHeight || 700;
+
+  paintSection('bgProviders', [
+    {x:W*.09,y:pH*.12,rx:W*.26,ry:pH*.28,c:'#00a8e0',op:.10},{x:W*.72,y:pH*.18,rx:W*.22,ry:pH*.24,c:'#d4007a',op:.09},
+    {x:W*.88,y:pH*.55,rx:W*.20,ry:pH*.22,c:'#7c3aed',op:.08},{x:W*.25,y:pH*.72,rx:W*.24,ry:pH*.20,c:'#ff6b00',op:.09},
+    {x:W*.55,y:pH*.50,rx:W*.18,ry:pH*.22,c:'#059669',op:.08},{x:W*.42,y:pH*.22,rx:W*.14,ry:pH*.18,c:'#ffd166',op:.10},
+    {x:W*.80,y:pH*.82,rx:W*.17,ry:pH*.18,c:'#e4002b',op:.07},{x:W*.12,y:pH*.48,rx:W*.16,ry:pH*.20,c:'#0891b2',op:.09},
+  ]);
+  paintSection('bgBooking', [
+    {x:W*.08,y:bH*.15,rx:W*.24,ry:bH*.26,c:'#00a8e0',op:.11},{x:W*.82,y:bH*.25,rx:W*.22,ry:bH*.24,c:'#e4002b',op:.09},
+    {x:W*.52,y:bH*.72,rx:W*.28,ry:bH*.24,c:'#7c3aed',op:.09},{x:W*.90,y:bH*.68,rx:W*.18,ry:bH*.20,c:'#ffd166',op:.10},
+    {x:W*.28,y:bH*.55,rx:W*.20,ry:bH*.22,c:'#d4007a',op:.08},
+  ]);
+  paintSection('bgNews', [
+    {x:W*.10,y:nH*.20,rx:W*.22,ry:nH*.24,c:'#00b4d8',op:.09},{x:W*.78,y:nH*.12,rx:W*.20,ry:nH*.22,c:'#d4007a',op:.08},
+    {x:W*.88,y:nH*.65,rx:W*.18,ry:nH*.22,c:'#059669',op:.08},{x:W*.38,y:nH*.70,rx:W*.24,ry:nH*.22,c:'#ff6b00',op:.08},
+    {x:W*.60,y:nH*.38,rx:W*.16,ry:nH*.18,c:'#7c3aed',op:.08},
+  ]);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   CALENDAR
+────────────────────────────────────────────────────────── */
+let selDate = null;
+let calY = new Date().getFullYear();
+let calM = new Date().getMonth();
+const _now = new Date();
+
+function renderCal() {
+  const MN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('calLbl').textContent = MN[calM] + ' ' + calY;
+  const g   = document.getElementById('calGrid');
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  g.innerHTML = DOW.map(d => `<div class="cdow">${d}</div>`).join('');
+  const first = new Date(calY, calM, 1).getDay();
+  const total = new Date(calY, calM + 1, 0).getDate();
+  const todMs = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate()).getTime();
+  for (let i = 0; i < first; i++) g.innerHTML += '<div class="cday emp"></div>';
+  for (let d = 1; d <= total; d++) {
+    const dm  = new Date(calY, calM, d).getTime();
+    const ds  = `${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cls = ['cday',
+      dm < todMs               ? 'pst' : '',
+      dm === todMs             ? 'tod' : '',
+      selDate === ds           ? 'sel' : '',
+      DB.appointments.some(a => a.date === ds) ? 'apt' : ''
+    ].filter(Boolean).join(' ');
+    const oc = dm < todMs ? '' : `onclick="pickDate('${ds}')"`;
+    g.innerHTML += `<div class="${cls}" ${oc}>${d}</div>`;
+  }
+  const msKey = `${calY}-${String(calM+1).padStart(2,'0')}`;
+  const apts  = DB.appointments.filter(a => (a.date||'').startsWith(msKey));
+  const bi    = document.getElementById('bkItems');
+  bi.innerHTML = apts.length
+    ? apts.map(a => `<div class="bkitem">${a.firstName||''} ${a.lastName||''} — ${a.time||''}<span>${a.date||''} · ${a.city||''}</span></div>`).join('')
+    : '<div style="color:#94a3b8;font-size:.76rem">No appointments this month.</div>';
+}
+
+function calMove(dir) {
+  calM += dir;
+  if (calM > 11) { calM = 0; calY++; }
+  if (calM < 0)  { calM = 11; calY--; }
+  renderCal();
+}
+
+function pickDate(ds) {
+  selDate = ds;
+  const [y, m, d] = ds.split('-');
+  const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const lbl = MN[parseInt(m) - 1] + ' ' + parseInt(d) + ', ' + y;
+  document.getElementById('selDisp').textContent    = 'Selected: ' + lbl;
+  document.getElementById('fmDateLbl').textContent  = 'Book for ' + lbl;
+  renderCal();
+}
+
+async function bookApt() {
+  const g   = id => (document.getElementById(id)||{}).value?.trim() || '';
+  const fn  = g('fFirst'), ln = g('fLast'), em = g('fEmail'), ph = g('fPhone');
+  const mg  = document.getElementById('fMsg');
+  if (!selDate)        { showMsg(mg,'Please select a date on the calendar.','er'); return; }
+  if (!fn||!ln||!em||!ph){ showMsg(mg,'Please fill in all required fields.','er'); return; }
+  if (!em.includes('@')){ showMsg(mg,'Please enter a valid email address.','er'); return; }
+  const btn = document.getElementById('subBtn');
+  btn.disabled = true; btn.textContent = 'Booking…';
+  const apt = { id:Date.now(), firstName:fn, lastName:ln, email:em, phone:ph, date:selDate, time:g('fTime')||'9:00 AM', city:g('fCity'), notes:g('fNotes'), createdAt:new Date().toISOString() };
+  DB.appointments.push(apt);
+  await saveDB();
+  showMsg(mg, `✅ Booked for ${fn} on ${apt.date} at ${apt.time}! We'll contact you at ${em}.`, 'ok');
+  showToast(`Confirmed: ${fn} ${ln} on ${apt.date}`);
+  ['fFirst','fLast','fEmail','fPhone','fNotes'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  const fc = document.getElementById('fCity'); if(fc) fc.value='';
+  selDate = null;
+  document.getElementById('selDisp').textContent   = 'No date selected — click a date on the calendar';
+  document.getElementById('fmDateLbl').textContent = 'Select a date to book';
+  btn.disabled = false; btn.textContent = 'Book Appointment';
+  renderCal();
+}
+
+/* ──────────────────────────────────────────────────────────────
+   COMMUNITY REPORTS
+────────────────────────────────────────────────────────── */
+function toggleRepForm() { document.getElementById('repForm').classList.toggle('open'); }
+
+async function submitRep() {
+  const rep = {
+    id: Date.now(),
+    provider:  (document.getElementById('rProv')||{}).value || 'Unknown',
+    city:      (document.getElementById('rCity')||{}).value || 'Unknown',
+    desc:      ((document.getElementById('rDesc')||{}).value || '').trim(),
+    timestamp: new Date().toISOString()
+  };
+  DB.outageReports.push(rep);
+  await saveDB();
+  const rd = document.getElementById('rDesc'); if (rd) rd.value = '';
+  document.getElementById('repForm').classList.remove('open');
+  buildCommChart();
+  buildRepList();
+  showToast('Report submitted for ' + rep.provider + ' in ' + rep.city);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   HELPERS
+────────────────────────────────────────────────────────── */
+function showMsg(el, txt, cls) { if (el) { el.textContent = txt; el.className = 'fmsg ' + cls; } }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   BOOT — build all DOM first; remote load is non-blocking
+────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', async () => {
+  /* 1. Static DOM — synchronous, always works */
+  buildProviders();
+  buildStats();
+  buildLegend();
+  buildCharts();
+  buildUptimeCards();
+  buildCityGauges();
+  buildIncidents();
+  buildNews();
+  renderCal();
+  buildCommChart();
+  buildRepList();
+
+  /* 2. Painterly backgrounds — needs layout first */
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      paintAllBgs();
+      window.addEventListener('resize', () => {
+        clearTimeout(window._rsz);
+        window._rsz = setTimeout(paintAllBgs, 250);
+      });
+    });
+  });
+
+  /* 3. Remote data — non-blocking; re-renders only dynamic parts */
+  setSt('busy');
+  await loadDB();
+  renderCal();
+  buildCommChart();
+  buildRepList();
+});
+</script>
 </body>
 </html>
